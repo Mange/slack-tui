@@ -2,6 +2,7 @@ extern crate termion;
 extern crate tui;
 
 mod widgets;
+mod layout;
 
 use std::io;
 use std::sync::mpsc;
@@ -19,7 +20,7 @@ use termion::input::TermRead;
 
 use widgets::ChatHistory;
 
-type Backend = MouseBackend;
+pub type TerminalBackend = Terminal<MouseBackend>;
 
 enum Event {
     Tick,
@@ -31,9 +32,8 @@ struct Message {
     body: &'static str,
 }
 
-struct App {
+pub struct App {
     size: Rect,
-    terminal: Terminal<Backend>,
     messages: Vec<Message>,
     history_scroll: usize,
 }
@@ -49,7 +49,7 @@ impl Message {
 }
 
 fn main() {
-    let backend = Backend::new().unwrap();
+    let backend = MouseBackend::new().unwrap();
     let terminal = Terminal::new(backend).unwrap();
 
     let messages = vec![
@@ -95,7 +95,7 @@ fn main() {
         },
         Message {
             from: "Christoffer",
-            body: ":gold_medal: Mange for being wasteful of your life",
+            body: "🏅 Mange for being wasteful of your life",
         },
         Message {
             from: "Christoffer",
@@ -121,18 +121,17 @@ fn main() {
 
     let size = terminal.size().unwrap();
     let mut app = App {
-        terminal: terminal,
         history_scroll: 0,
         messages,
         size,
     };
-    app.run().unwrap();
+    app.run(terminal).unwrap();
 }
 
 impl App {
-    fn run(&mut self) -> Result<(), io::Error> {
-        self.terminal.clear()?;
-        self.terminal.hide_cursor()?;
+    fn run(&mut self, mut terminal: TerminalBackend) -> Result<(), io::Error> {
+        terminal.clear()?;
+        terminal.hide_cursor()?;
 
         let (tx, rx) = mpsc::channel();
         let input_tx = tx.clone();
@@ -156,12 +155,12 @@ impl App {
         });
 
         loop {
-            let size = self.terminal.size()?;
+            let size = terminal.size()?;
             if size != self.size {
-                self.terminal.resize(size)?;
+                terminal.resize(size)?;
                 self.size = size;
             }
-            self.draw()?;
+            self.draw(&mut terminal)?;
             let evt = rx.recv().unwrap();
             match evt {
                 Event::Input(input) => match input {
@@ -174,8 +173,8 @@ impl App {
             }
         }
 
-        self.terminal.show_cursor()?;
-        self.terminal.clear()?;
+        terminal.show_cursor()?;
+        terminal.clear()?;
         Ok(())
     }
 
@@ -187,44 +186,12 @@ impl App {
         self.history_scroll = self.history_scroll.saturating_sub(1);
     }
 
-    fn draw(&mut self) -> Result<(), io::Error> {
+    fn draw(&mut self, terminal: &mut TerminalBackend) -> Result<(), io::Error> {
         let size = self.size;
-
-        let chat: String = self.messages
-            .iter()
-            .map(Message::render_as_string)
-            .collect();
 
         let history_scroll = self.history_scroll;
 
-        Group::default()
-            .direction(Direction::Horizontal)
-            .margin(1)
-            .sizes(&[Size::Percent(20), Size::Percent(80)])
-            .render(&mut self.terminal, &size, |terminal, chunks| {
-                SelectableList::default()
-                    .block(Block::default().title("Channels").borders(Borders::RIGHT))
-                    .items(&["#env-production", "#random", "#api-v3", "#team-core"])
-                    .select(1)
-                    .style(Style::default().fg(Color::White))
-                    .highlight_style(
-                        Style::default()
-                            .modifier(Modifier::Italic)
-                            .modifier(Modifier::Invert),
-                    )
-                    .render(terminal, &chunks[0]);
-
-                ChatHistory::default()
-                    .scroll(history_scroll)
-                    .block(
-                        Block::default()
-                            .title("#random - Post whatever you want here")
-                            .borders(Borders::ALL),
-                    )
-                    .text(&chat)
-                    .render(terminal, &chunks[1]);
-            });
-
-        self.terminal.draw()
+        layout::render(self, terminal);
+        terminal.draw()
     }
 }
