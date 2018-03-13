@@ -162,6 +162,8 @@ impl App {
             match evt {
                 Event::Input(input) => match input {
                     event::Key::Char('q') => break,
+                    event::Key::Char('j') => self.scroll_down(),
+                    event::Key::Char('k') => self.scroll_up(),
                     _ => {}
                 },
                 Event::Tick => {}
@@ -171,6 +173,14 @@ impl App {
         self.terminal.show_cursor()?;
         self.terminal.clear()?;
         Ok(())
+    }
+
+    fn scroll_down(&mut self) {
+        self.history_scroll = self.history_scroll.saturating_add(1);
+    }
+
+    fn scroll_up(&mut self) {
+        self.history_scroll = self.history_scroll.saturating_sub(1);
     }
 
     fn draw(&mut self) -> Result<(), io::Error> {
