@@ -1,6 +1,8 @@
 extern crate termion;
 extern crate tui;
 
+mod widgets;
+
 use std::io;
 use std::sync::mpsc;
 use std::thread;
@@ -8,12 +10,14 @@ use std::time;
 
 use tui::Terminal;
 use tui::backend::MouseBackend;
-use tui::widgets::{Block, Borders, Paragraph, SelectableList, Widget};
+use tui::widgets::{Block, Borders, SelectableList, Widget};
 use tui::layout::{Direction, Group, Rect, Size};
 use tui::style::{Color, Modifier, Style};
 
 use termion::event;
 use termion::input::TermRead;
+
+use widgets::ChatHistory;
 
 type Backend = MouseBackend;
 
@@ -31,7 +35,7 @@ struct App {
     size: Rect,
     terminal: Terminal<Backend>,
     messages: Vec<Message>,
-    history_scroll: u16,
+    history_scroll: usize,
 }
 
 impl Message {
@@ -210,10 +214,14 @@ impl App {
                     )
                     .render(terminal, &chunks[0]);
 
-                Paragraph::default()
-                    .wrap(true)
-                    .text(&chat)
+                ChatHistory::default()
                     .scroll(history_scroll)
+                    .block(
+                        Block::default()
+                            .title("#random - Post whatever you want here")
+                            .borders(Borders::ALL),
+                    )
+                    .text(&chat)
                     .render(terminal, &chunks[1]);
             });
 
