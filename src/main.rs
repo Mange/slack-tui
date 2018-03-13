@@ -27,6 +27,13 @@ struct Message {
     body: &'static str,
 }
 
+struct App {
+    size: Rect,
+    terminal: Terminal<Backend>,
+    messages: Vec<Message>,
+    history_scroll: u16,
+}
+
 impl Message {
     fn render_as_string(&self) -> String {
         format!(
@@ -39,38 +46,9 @@ impl Message {
 
 fn main() {
     let backend = Backend::new().unwrap();
-    let mut terminal = Terminal::new(backend).unwrap();
-    run(terminal).unwrap();
-}
+    let terminal = Terminal::new(backend).unwrap();
 
-fn run(mut terminal: Terminal<Backend>) -> Result<(), io::Error> {
-    terminal.clear()?;
-    terminal.hide_cursor()?;
-
-    let (tx, rx) = mpsc::channel();
-    let input_tx = tx.clone();
-
-    thread::spawn(move || {
-        let stdin = io::stdin();
-        for c in stdin.keys() {
-            let evt = c.unwrap();
-            input_tx.send(Event::Input(evt)).unwrap();
-            if evt == event::Key::Char('q') {
-                break;
-            }
-        }
-    });
-    thread::spawn(move || {
-        let tx = tx.clone();
-        loop {
-            tx.send(Event::Tick).unwrap();
-            thread::sleep(time::Duration::from_millis(200));
-        }
-    });
-
-    let mut last_size = Rect::default();
-
-    let mut messages = vec![
+    let messages = vec![
         Message {
             from: "Mange",
             body: "OMG",
@@ -137,53 +115,98 @@ fn run(mut terminal: Terminal<Backend>) -> Result<(), io::Error> {
         },
     ];
 
-    loop {
-        let size = terminal.size().unwrap();
-        if size != last_size {
-            terminal.resize(size).unwrap();
-            last_size = size;
-        }
-        draw(&messages, &mut terminal)?;
-        let evt = rx.recv().unwrap();
-        match evt {
-            Event::Input(event::Key::Char('q')) => break,
-            Event::Input(_) => {}
-            Event::Tick => {}
-        }
-    }
-
-    terminal.show_cursor()?;
-    terminal.clear()?;
-    Ok(())
+    let size = terminal.size().unwrap();
+    let mut app = App {
+        terminal: terminal,
+        history_scroll: 0,
+        messages,
+        size,
+    };
+    app.run().unwrap();
 }
 
-fn draw(messages: &[Message], terminal: &mut Terminal<Backend>) -> Result<(), io::Error> {
-    let size = terminal.size()?;
+impl App {
+    fn run(&mut self) -> Result<(), io::Error> {
+        self.terminal.clear()?;
+        self.terminal.hide_cursor()?;
 
-    Group::default()
-        .direction(Direction::Horizontal)
-        .margin(1)
-        .sizes(&[Size::Percent(20), Size::Percent(80)])
-        .render(terminal, &size, |terminal, chunks| {
-            SelectableList::default()
-                .block(Block::default().title("Channels").borders(Borders::RIGHT))
-                .items(&["#env-production", "#random", "#api-v3", "#team-core"])
-                .select(1)
-                .style(Style::default().fg(Color::White))
-                .highlight_style(
-                    Style::default()
-                        .modifier(Modifier::Italic)
-                        .modifier(Modifier::Invert),
-                )
-                .render(terminal, &chunks[0]);
+        let (tx, rx) = mpsc::channel();
+        let input_tx = tx.clone();
 
-            let chat: String = messages.iter().map(Message::render_as_string).collect();
-
-            Paragraph::default()
-                .wrap(true)
-                .text(&chat)
-                .render(terminal, &chunks[1]);
+        thread::spawn(move || {
+            let stdin = io::stdin();
+            for c in stdin.keys() {
+                let evt = c.unwrap();
+                input_tx.send(Event::Input(evt)).unwrap();
+                if evt == event::Key::Char('q') {
+                    break;
+                }
+            }
+        });
+        thread::spawn(move || {
+            let tx = tx.clone();
+            loop {
+                tx.send(Event::Tick).unwrap();
+                thread::sleep(time::Duration::from_millis(200));
+            }
         });
 
-    terminal.draw()
+        loop {
+            let size = self.terminal.size()?;
+            if size != self.size {
+                self.terminal.resize(size)?;
+                self.size = size;
+            }
+            self.draw()?;
+            let evt = rx.recv().unwrap();
+            match evt {
+                Event::Input(input) => match input {
+                    event::Key::Char('q') => break,
+                    _ => {}
+                },
+                Event::Tick => {}
+            }
+        }
+
+        self.terminal.show_cursor()?;
+        self.terminal.clear()?;
+        Ok(())
+    }
+
+    fn draw(&mut self) -> Result<(), io::Error> {
+        let size = self.size;
+
+        let chat: String = self.messages
+            .iter()
+            .map(Message::render_as_string)
+            .collect();
+
+        let history_scroll = self.history_scroll;
+
+        Group::default()
+            .direction(Direction::Horizontal)
+            .margin(1)
+            .sizes(&[Size::Percent(20), Size::Percent(80)])
+            .render(&mut self.terminal, &size, |terminal, chunks| {
+                SelectableList::default()
+                    .block(Block::default().title("Channels").borders(Borders::RIGHT))
+                    .items(&["#env-production", "#random", "#api-v3", "#team-core"])
+                    .select(1)
+                    .style(Style::default().fg(Color::White))
+                    .highlight_style(
+                        Style::default()
+                            .modifier(Modifier::Italic)
+                            .modifier(Modifier::Invert),
+                    )
+                    .render(terminal, &chunks[0]);
+
+                Paragraph::default()
+                    .wrap(true)
+                    .text(&chat)
+                    .scroll(history_scroll)
+                    .render(terminal, &chunks[1]);
+            });
+
+        self.terminal.draw()
+    }
 }
