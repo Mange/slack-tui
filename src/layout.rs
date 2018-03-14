@@ -1,4 +1,4 @@
-use super::{App, Message};
+use super::App;
 use super::TerminalBackend;
 use widgets::ChatHistory;
 
@@ -57,7 +57,7 @@ fn render_breadcrumbs(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
 }
 
 fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    let chat: String = app.messages.iter().map(Message::render_as_string).collect();
+    let chat = app.messages.render_into_canvas(rect.width as usize);
 
     ChatHistory::default()
         .scroll(app.history_scroll)

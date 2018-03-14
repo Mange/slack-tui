@@ -3,6 +3,7 @@ extern crate tui;
 
 mod widgets;
 mod layout;
+mod message_buffer;
 
 use std::io;
 use std::sync::mpsc;
@@ -11,14 +12,13 @@ use std::time;
 
 use tui::Terminal;
 use tui::backend::MouseBackend;
-use tui::widgets::{Block, Borders, SelectableList, Widget};
-use tui::layout::{Direction, Group, Rect, Size};
-use tui::style::{Color, Modifier, Style};
+use tui::widgets::Widget;
+use tui::layout::Rect;
 
 use termion::event;
 use termion::input::TermRead;
 
-use widgets::ChatHistory;
+use message_buffer::{Message, MessageBuffer};
 
 pub type TerminalBackend = Terminal<MouseBackend>;
 
@@ -27,25 +27,10 @@ enum Event {
     Input(event::Key),
 }
 
-struct Message {
-    from: &'static str,
-    body: &'static str,
-}
-
 pub struct App {
     size: Rect,
-    messages: Vec<Message>,
+    messages: MessageBuffer,
     history_scroll: usize,
-}
-
-impl Message {
-    fn render_as_string(&self) -> String {
-        format!(
-            "{{fg=cyan;mod=bold {from}}}\n{text}\n\n",
-            from = self.from,
-            text = self.body
-        )
-    }
 }
 
 fn main() {
@@ -54,66 +39,82 @@ fn main() {
 
     let messages = vec![
         Message {
+            timestamp: "1111111.0",
             from: "Mange",
             body: "OMG",
         },
         Message {
+            timestamp: "1111112.0",
             from: "Mange",
             body: "Does this really work?",
         },
         Message {
+            timestamp: "1111113.0",
             from: "Socrates",
             body: "...well, yeah?",
         },
         Message {
+            timestamp: "1111114.0",
             from: "Socrates",
             body: "What did you expect?",
         },
         Message {
+            timestamp: "1111115.0",
             from: "Jonas",
             body: "lol did u RIIR for Slack?",
         },
         Message {
+            timestamp: "1111116.0",
             from: "Christoffer",
             body: "RIIR?",
         },
         Message {
+            timestamp: "1111117.0",
             from: "Jonas",
             body: "RIIR = Rewrite It In Rust",
         },
         Message {
+            timestamp: "1111118.0",
             from: "Mange",
             body: "Rewrite-it-in-rust",
         },
         Message {
+            timestamp: "1111119.0",
             from: "Jonas",
             body: ":smurf:",
         },
         Message {
+            timestamp: "1111120.0",
             from: "Mange",
             body: ":okay:",
         },
         Message {
+            timestamp: "1111121.0",
             from: "Christoffer",
             body: "🏅 Mange for being wasteful of your life",
         },
         Message {
+            timestamp: "1111122.0",
             from: "Christoffer",
             body: "You only get to live, what? Like 70 years or so. And you spend",
         },
         Message {
+            timestamp: "1111123.0",
             from: "Christoffer",
             body: "it on RIIR Slack now?",
         },
         Message {
+            timestamp: "1111124.0",
             from: "Mange",
             body: ":(",
         },
         Message {
+            timestamp: "1111125.0",
             from: "Mange",
             body: "Lucky me that this isn't the real Chstistoffer",
         },
         Message {
+            timestamp: "1111126.0",
             from: "Christoffer",
             body: "Exactly, I'm just a figment of your imagination.",
         },
@@ -122,7 +123,7 @@ fn main() {
     let size = terminal.size().unwrap();
     let mut app = App {
         history_scroll: 0,
-        messages,
+        messages: messages.into(),
         size,
     };
     app.run(terminal).unwrap();
