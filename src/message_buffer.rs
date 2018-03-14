@@ -2,8 +2,9 @@ use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
 
+#[derive(Clone, Debug)]
 pub struct Message {
-    pub timestamp: &'static str,
+    pub timestamp: String,
     pub from: &'static str,
     pub body: &'static str,
 }
@@ -16,7 +17,7 @@ impl Hash for Message {
 
 impl PartialEq for Message {
     fn eq(&self, rhs: &Message) -> bool {
-        self.timestamp.eq(rhs.timestamp)
+        self.timestamp.eq(&rhs.timestamp)
     }
 }
 
@@ -24,13 +25,13 @@ impl Eq for Message {}
 
 impl PartialOrd for Message {
     fn partial_cmp(&self, rhs: &Message) -> Option<Ordering> {
-        self.timestamp.partial_cmp(rhs.timestamp)
+        self.timestamp.partial_cmp(&rhs.timestamp)
     }
 }
 
 impl Ord for Message {
     fn cmp(&self, rhs: &Message) -> Ordering {
-        self.timestamp.cmp(rhs.timestamp)
+        self.timestamp.cmp(&rhs.timestamp)
     }
 }
 
