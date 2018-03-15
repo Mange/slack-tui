@@ -21,14 +21,6 @@ impl Default for Scrollbar {
 }
 
 impl Scrollbar {
-    pub fn total(&self) -> usize {
-        self.total
-    }
-
-    pub fn shown_range(&self) -> Range<usize> {
-        self.shown_range.clone()
-    }
-
     pub fn set_total(&mut self, total: usize) -> &mut Scrollbar {
         self.total = total;
         if self.shown_range.end > total {
@@ -120,31 +112,31 @@ mod tests {
     fn it_caps_range_to_total() {
         let mut scrollbar = Scrollbar::default();
 
-        assert_eq!(scrollbar.total(), 0);
-        assert_eq!(scrollbar.shown_range(), 0..0);
+        assert_eq!(scrollbar.total, 0);
+        assert_eq!(scrollbar.shown_range, 0..0);
 
         scrollbar.set_total(100).set_shown_range(10..60);
 
-        assert_eq!(scrollbar.total(), 100);
-        assert_eq!(scrollbar.shown_range(), 10..60);
+        assert_eq!(scrollbar.total, 100);
+        assert_eq!(scrollbar.shown_range, 10..60);
 
         scrollbar.set_total(50);
 
-        assert_eq!(scrollbar.total(), 50);
-        assert_eq!(scrollbar.shown_range(), 0..50);
+        assert_eq!(scrollbar.total, 50);
+        assert_eq!(scrollbar.shown_range, 0..50);
 
         scrollbar.set_total(10);
 
-        assert_eq!(scrollbar.total(), 10);
-        assert_eq!(scrollbar.shown_range(), 0..10);
+        assert_eq!(scrollbar.total, 10);
+        assert_eq!(scrollbar.shown_range, 0..10);
 
         scrollbar
             .set_total(100)
             .set_shown_range(50..90)
             .set_total(90);
 
-        assert_eq!(scrollbar.total(), 90);
-        assert_eq!(scrollbar.shown_range(), 50..90);
+        assert_eq!(scrollbar.total, 90);
+        assert_eq!(scrollbar.shown_range, 50..90);
     }
 
     #[test]
@@ -157,8 +149,8 @@ mod tests {
     fn it_allows_ranges_up_until_total() {
         let mut scrollbar = Scrollbar::default();
         scrollbar.set_total(10).set_shown_range(5..10);
-        assert_eq!(scrollbar.total(), 10);
-        assert_eq!(scrollbar.shown_range(), 5..10);
+        assert_eq!(scrollbar.total, 10);
+        assert_eq!(scrollbar.shown_range, 5..10);
     }
 
     #[test]

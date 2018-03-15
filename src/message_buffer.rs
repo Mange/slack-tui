@@ -2,11 +2,11 @@ use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Message {
     pub timestamp: String,
-    pub from: &'static str,
-    pub body: &'static str,
+    pub from: String,
+    pub body: String,
 }
 
 impl Hash for Message {

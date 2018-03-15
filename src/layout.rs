@@ -18,7 +18,7 @@ pub fn render(app: &App, terminal: &mut TerminalBackend) {
         });
 }
 
-fn render_sidebar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_sidebar(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     SelectableList::default()
         .block(Block::default().title("Channels").borders(Borders::RIGHT))
         .items(&["#env-production", "#random", "#api-v3", "#team-core"])
@@ -70,14 +70,14 @@ fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
         .render(terminal, rect);
 }
 
-fn render_statusbar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_statusbar(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     Paragraph::default()
         .text("{mod=bold [NORMAL]} - {fg=dark_gray Peter is typing...}")
         .style(Style::default().bg(Color::Gray).fg(Color::White))
         .render(terminal, rect);
 }
 
-fn render_input(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_input(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     Paragraph::default()
         .text("{fg=dark_gray Enter a reply...}")
         .style(Style::default().bg(Color::Black).fg(Color::White))
