@@ -1,37 +1,32 @@
 use tui::style::Style;
-use tui::widgets::{Block, Paragraph, Widget};
+use tui::widgets::Widget;
 use tui::layout::Rect;
 use tui::buffer::Buffer;
 
+use widgets::Scrollbar;
+
+const EMPTY_CANVAS: &'static [String] = &[];
+
 pub struct ChatHistory<'a> {
-    block: Option<Block<'a>>,
-    style: Style,
     scroll: usize,
-    text: &'a str,
+    canvas: &'a [String],
 }
 
 impl<'a> Default for ChatHistory<'a> {
     fn default() -> ChatHistory<'a> {
         ChatHistory {
-            block: None,
-            style: Style::default(),
             scroll: 0,
-            text: "",
+            canvas: &EMPTY_CANVAS,
         }
     }
 }
 
 impl<'a> ChatHistory<'a> {
-    pub fn text(&mut self, text: &'a str) -> &mut ChatHistory<'a> {
-        self.text = text;
-        self
-    }
-
-    pub fn block<B>(&mut self, block: B) -> &mut ChatHistory<'a>
-    where
-        B: Into<Option<Block<'a>>>,
-    {
-        self.block = block.into();
+    pub fn canvas(&mut self, canvas: &'a Vec<String>) -> &mut ChatHistory<'a> {
+        if canvas.len() <= self.scroll {
+            self.scroll = canvas.len();
+        }
+        self.canvas = canvas;
         self
     }
 
@@ -43,18 +38,44 @@ impl<'a> ChatHistory<'a> {
 
 impl<'a> Widget for ChatHistory<'a> {
     fn draw(&mut self, area: &Rect, buf: &mut Buffer) {
-        let mut paragraph = Paragraph::default();
+        if area.width <= 1 {
+            return;
+        }
+        // Render canvas backwards by "scrolling up" to the nth last line, rendering it at the
+        // bottom of the rect and then moving upwards until we are outside of the rect.
+        // NOTE: scroll will always be <= canvas.len()
+        let last_row_index = self.canvas.len() - self.scroll;
+        let width = area.width - 1; // Leave 1 space for scrollbar
 
-        paragraph
-            .style(self.style)
-            .text(&self.text)
-            .wrap(true)
-            .scroll(self.scroll as u16);
+        let mut rows = 0;
+        let mut iterator = self.canvas[0..last_row_index].iter();
 
-        if let Some(block) = self.block.clone() {
-            paragraph.block(block).draw(area, buf);
-        } else {
-            paragraph.draw(area, buf);
+        while let Some(line) = iterator.next_back() {
+            if area.bottom() - rows < area.top() {
+                break;
+            }
+
+            assert!(line.len() <= width as usize);
+            buf.set_string(
+                area.left(),
+                area.bottom() - rows,
+                &format!("{}/{}", line.len(), width),
+                &Style::default(),
+            );
+            rows += 1;
+        }
+
+        // Draw scrollbar.
+        if area.width > 10 {
+            let scrollbar_bottom = self.canvas.len() - self.scroll;
+            let scrollbar_top = scrollbar_bottom.saturating_sub(area.height as usize);
+            assert!(scrollbar_top <= scrollbar_bottom);
+
+            let scrollbar_area = Rect::new(area.right() - 1, area.top(), 1, area.height);
+            Scrollbar::default()
+                .set_total(self.canvas.len())
+                .set_shown_range(scrollbar_top..scrollbar_bottom)
+                .draw(&scrollbar_area, buf)
         }
     }
 }

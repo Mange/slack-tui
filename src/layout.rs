@@ -57,11 +57,16 @@ fn render_breadcrumbs(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
 }
 
 fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    let chat = app.messages.render_into_canvas(rect.width as usize);
+    if rect.width < 2 {
+        return;
+    }
+
+    // Leave one width for scrollbar
+    let canvas = app.messages.render_into_canvas((rect.width - 1) as usize);
 
     ChatHistory::default()
         .scroll(app.history_scroll)
-        .text(&chat)
+        .canvas(&canvas)
         .render(terminal, rect);
 }
 

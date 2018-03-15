@@ -58,7 +58,7 @@ impl Into<MessageBuffer> for Vec<Message> {
 }
 
 impl MessageBuffer {
-    pub fn render_into_canvas(&self, width: usize) -> String {
+    pub fn render_into_canvas(&self, width: usize) -> Vec<String> {
         // This is extremely inefficient and lazy and stupid.
         // But it should be enough to experiment with the UI.
         //
@@ -67,9 +67,7 @@ impl MessageBuffer {
         //  2. Full message is rendered first, *then* it is wrapped. The message renderer should
         //     wrap immediately instead.
         //  3. Allocating intermediary `Vec`s when we could append to a String right away.
-        //  4. The Canvas should know about how many lines there are in total to help with
-        //     scrolling efforts.
-        //  5. Only when size changed since last time should we have to reflow all the messages.
+        //  4. Only when size changed since last time should we have to reflow all the messages.
         //     Try to figure outt a buffering scheme where new messages are added at the end and
         //     only cause a re-render at the end. Maybe. Something like that.
         self.messages
@@ -83,6 +81,5 @@ impl MessageBuffer {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()
-            .join("\n")
     }
 }

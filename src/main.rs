@@ -191,11 +191,15 @@ impl App {
     }
 
     fn scroll_down(&mut self) {
-        self.history_scroll = self.history_scroll.saturating_add(1);
+        // NOTE: Scroll value is distance from bottom
+        self.history_scroll = self.history_scroll.saturating_sub(1);
     }
 
     fn scroll_up(&mut self) {
-        self.history_scroll = self.history_scroll.saturating_sub(1);
+        // NOTE: Scroll value is distance from bottom
+        // TODO: How to prevent scrolling past the end of the history? Do we need to render a
+        // canvas here too?
+        self.history_scroll = self.history_scroll.saturating_add(1);
     }
 
     fn draw(&mut self, terminal: &mut TerminalBackend) -> Result<(), io::Error> {
