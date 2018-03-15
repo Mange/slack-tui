@@ -37,11 +37,7 @@ impl Ord for Message {
 
 impl Message {
     fn render_as_string(&self) -> String {
-        format!(
-            "{{fg=cyan;mod=bold {from}}}\n{text}\n",
-            from = self.from,
-            text = self.body
-        )
+        format!("{from}\n{text}\n", from = self.from, text = self.body)
     }
 }
 
@@ -78,6 +74,7 @@ impl MessageBuffer {
                 (0..)
                     .map(|_| chars.by_ref().take(width).collect::<String>())
                     .take_while(|s| !s.is_empty())
+                    .flat_map(|s| s.split("\n").map(String::from).collect::<Vec<_>>())
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()

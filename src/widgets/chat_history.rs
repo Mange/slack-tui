@@ -56,12 +56,8 @@ impl<'a> Widget for ChatHistory<'a> {
             }
 
             assert!(line.len() <= width as usize);
-            buf.set_string(
-                area.left(),
-                area.bottom() - rows,
-                &format!("{}/{}", line.len(), width),
-                &Style::default(),
-            );
+            assert!(!line.contains('\n'));
+            buf.set_string(area.left(), area.bottom() - rows, line, &Style::default());
             rows += 1;
         }
 
