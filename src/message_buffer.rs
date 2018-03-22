@@ -42,7 +42,10 @@ impl Message {
 
         let underlined = Style::default().modifier(Modifier::Underline);
         let mut canvas = Canvas::new(width);
-        canvas.add_string_truncated(&format!("{}\n", self.from), underlined);
+        canvas.add_string_truncated(&self.from, underlined);
+        if self.from.len() < width as usize {
+            canvas.add_string_truncated("\n", Style::default());
+        }
         canvas.add_string_wrapped(&format!("{}\n", self.body), Style::default());
 
         canvas
@@ -93,8 +96,7 @@ mod tests {
             assert_eq!(
                 &big_canvas.render_to_string(Some("|")),
                 "Bear Grylls                                       |
-I'm lost. I guess I have to drink my own urine. :)|
-                                                  |",
+I'm lost. I guess I have to drink my own urine. :)|",
             );
 
             let small_canvas = message.render_as_canvas(20);

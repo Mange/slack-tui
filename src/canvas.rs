@@ -8,6 +8,7 @@ use tui::style::Style;
 pub struct Canvas {
     width: u16,
     cells: Vec<Cell>,
+    line_full: bool,
 }
 
 impl Canvas {
@@ -15,6 +16,7 @@ impl Canvas {
         Canvas {
             width: width,
             cells: Vec::new(),
+            line_full: false,
         }
     }
 
@@ -31,46 +33,14 @@ impl Canvas {
     }
 
     pub fn add_string_wrapped(&mut self, string: &str, style: Style) {
-        let mut chars_on_line = 0;
         for chr in string.chars() {
-            match chr {
-                '\n' => {
-                    let remaining = self.width - chars_on_line;
-                    for _ in 0..remaining {
-                        self.add_char(' ', style);
-                    }
-                    chars_on_line = 0;
-                }
-                '\r' => {}
-                // TODO: Treat \t and \b differently.
-                _ => {
-                    self.add_char(chr, style);
-                    chars_on_line = (chars_on_line + 1) % self.width;
-                }
-            }
+            self.add_char(chr, style, true);
         }
     }
 
     pub fn add_string_truncated(&mut self, string: &str, style: Style) {
-        let mut chars_on_line = 0;
         for chr in string.chars() {
-            match chr {
-                '\n' => {
-                    let remaining = self.width - chars_on_line;
-                    for _ in 0..remaining {
-                        self.add_char(' ', style);
-                    }
-                    chars_on_line = 0;
-                }
-                '\r' => {}
-                // TODO: Treat \t and \b differently.
-                _ => {
-                    if chars_on_line < self.width {
-                        self.add_char(chr, style);
-                    }
-                    chars_on_line += 1;
-                }
-            }
+            self.add_char(chr, style, false);
         }
     }
 
@@ -141,7 +111,46 @@ impl Canvas {
         None
     }
 
-    fn add_char(&mut self, chr: char, style: Style) {
+    fn total_characters_on_last_line(&self) -> u16 {
+        (self.cells.len() % self.width as usize) as u16
+    }
+
+    fn add_char(&mut self, chr: char, style: Style, wrapping: bool) {
+        match chr {
+            '\n' => {
+                // If line was full when a new line should start, treat it as normal wrapping and
+                // just begin on the new line.
+                // If the line was not full, complete it by adding whitespace.
+                if self.line_full {
+                    self.line_full = false;
+                } else {
+                    self.complete_line(style)
+                }
+            }
+            '\r' => {}
+            // TODO: Treat \t and \b differently.
+            _ => {
+                if self.line_full && wrapping {
+                    self.line_full = false;
+                }
+
+                if !self.line_full {
+                    self.add_cell(chr, style);
+                    self.line_full = self.total_characters_on_last_line() == 0;
+                }
+            }
+        }
+    }
+
+    fn complete_line(&mut self, style: Style) {
+        let remaining = self.width - self.total_characters_on_last_line();
+        for _ in 0..remaining {
+            self.add_cell(' ', style);
+        }
+        self.line_full = false;
+    }
+
+    fn add_cell(&mut self, chr: char, style: Style) {
         let mut cell = Cell::default();
         cell.set_char(chr).set_style(style);
         self.cells.push(cell);
@@ -255,21 +264,24 @@ mod tests {
         assert_eq!(canvas.height(), 0);
 
         canvas.add_string_wrapped("Foobar", red);
+        assert_eq!(&canvas.render_to_string(None), "Foo\nbar");
         assert_eq!(canvas.height(), 2);
         assert_eq!(canvas.cells.len(), 6);
 
-        canvas.add_string_truncated("Goodbye!", green);
+        canvas.add_string_truncated("\nGoodbye!", green);
+        assert_eq!(&canvas.render_to_string(None), "Foo\nbar\nGoo");
         assert_eq!(canvas.height(), 3);
         assert_eq!(canvas.cells.len(), 9);
 
-        // Adding a newline means "fill rest of line with spaces"
+        // Adding a newline means "fill rest of line with spaces", except when added to the end of
+        // a full line.
         canvas.add_string_truncated("\n!\n", green);
-        assert_eq!(canvas.height(), 5);
-        assert_eq!(canvas.cells.len(), 9 + 3 + 1 + 2);
+        assert_eq!(canvas.height(), 4);
+        assert_eq!(canvas.cells.len(), 9 + 1 + 2);
 
         assert_eq!(
             format!("{:?}", canvas),
-            "Canvas (width=3, height=5)\nFoo\nbar\nGoo\n   \n!  ",
+            "Canvas (width=3, height=4)\nFoo\nbar\nGoo\n!  ",
         );
 
         assert_eq!(canvas.get_pos(0, 0), Some(&cell('F', red)));
@@ -281,6 +293,76 @@ mod tests {
         assert_eq!(canvas.get_pos(3, 0), None);
         assert_eq!(canvas.get_pos(0, 8), None);
         assert_eq!(canvas.get_pos(3, 8), None);
+    }
+
+    #[test]
+    fn it_continues_on_last_line() {
+        let mut canvas = Canvas::new(10);
+        let style = Style::default();
+
+        let mut canvas = Canvas::new(10);
+        canvas.add_string_truncated("123", style);
+        assert_eq!(canvas.render_to_string(None), "123       ");
+
+        // Rest of line is cut off since it's the _truncated variant
+        canvas.add_string_truncated("1234567890", style);
+        assert_eq!(canvas.render_to_string(None), "1231234567");
+
+        // Keeps line truncated since we still have not added a newline.
+        canvas.add_string_truncated("123", style);
+        assert_eq!(canvas.render_to_string(None), "1231234567");
+
+        // Start a new line; the explicit "\n" breaks the line.
+        canvas.add_string_truncated("\n123", style);
+        assert_eq!(canvas.render_to_string(None), "1231234567\n123       ");
+
+        // Start a new line with two calls work; the explicit "\n" will break the line for the next
+        // call.
+        canvas.add_string_truncated("\n", style);
+        assert_eq!(canvas.render_to_string(None), "1231234567\n123       ");
+        canvas.add_string_truncated("!!!", style);
+        assert_eq!(
+            canvas.render_to_string(None),
+            "1231234567\n123       \n!!!       "
+        );
+    }
+
+    #[test]
+    fn it_wraps_existing_lines() {
+        let mut canvas = Canvas::new(10);
+        let style = Style::default();
+
+        let mut canvas = Canvas::new(10);
+        canvas.add_string_wrapped("123", style);
+        assert_eq!(canvas.render_to_string(None), "123       ");
+
+        // Rest of line is wrapped since it's the _wrapped variant
+        canvas.add_string_wrapped("1234567890", style);
+        assert_eq!(canvas.render_to_string(None), "1231234567\n890       ");
+
+        // Line is continued
+        canvas.add_string_wrapped("123", style);
+        assert_eq!(canvas.render_to_string(None), "1231234567\n890123    ");
+
+        // Start a new line
+        canvas.add_string_wrapped("\n123", style);
+        assert_eq!(
+            canvas.render_to_string(None),
+            "1231234567\n890123    \n123       "
+        );
+
+        // Ending line when line is full has no immediately visible effect
+        canvas.add_string_wrapped("4567890\n", style);
+        assert_eq!(
+            canvas.render_to_string(None),
+            "1231234567\n890123    \n1234567890"
+        );
+        // but it is visible when continuiong on the line
+        canvas.add_string_truncated("!", style);
+        assert_eq!(
+            canvas.render_to_string(None),
+            "1231234567\n890123    \n1234567890\n!         "
+        );
     }
 
     #[test]
@@ -391,8 +473,7 @@ mod tests {
             "          |
 12345     |
 1234567890|
-     67890|
-          |"
+     67890|"
         );
     }
 }
