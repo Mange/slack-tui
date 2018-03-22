@@ -1,33 +1,18 @@
-use tui::style::Style;
 use tui::widgets::Widget;
 use tui::layout::Rect;
 use tui::buffer::Buffer;
 
 use widgets::Scrollbar;
-
-const EMPTY_CANVAS: &'static [String] = &[];
+use canvas::{Canvas, ViewportOptions};
 
 pub struct ChatHistory<'a> {
     scroll: usize,
-    canvas: &'a [String],
-}
-
-impl<'a> Default for ChatHistory<'a> {
-    fn default() -> ChatHistory<'a> {
-        ChatHistory {
-            scroll: 0,
-            canvas: &EMPTY_CANVAS,
-        }
-    }
+    canvas: &'a Canvas,
 }
 
 impl<'a> ChatHistory<'a> {
-    pub fn canvas(&mut self, canvas: &'a Vec<String>) -> &mut ChatHistory<'a> {
-        if canvas.len() <= self.scroll {
-            self.scroll = canvas.len();
-        }
-        self.canvas = canvas;
-        self
+    pub fn with_canvas(canvas: &'a Canvas) -> ChatHistory<'a> {
+        ChatHistory { canvas, scroll: 0 }
     }
 
     pub fn scroll(&mut self, position: usize) -> &mut ChatHistory<'a> {
@@ -41,35 +26,45 @@ impl<'a> Widget for ChatHistory<'a> {
         if area.width <= 1 {
             return;
         }
-        // Render canvas backwards by "scrolling up" to the nth last line, rendering it at the
-        // bottom of the rect and then moving upwards until we are outside of the rect.
-        // NOTE: scroll will always be <= canvas.len()
-        let last_row_index = self.canvas.len() - self.scroll;
-        let width = area.width - 1; // Leave 1 space for scrollbar
 
-        let mut rows = 0;
-        let mut iterator = self.canvas[0..last_row_index].iter();
+        // Prevent scrolling past the canvas
+        // Canvas of height H, viewport of V, then we cannot scroll past (H-V) since V lines are
+        // shown, making top line the first line of the canvas.
+        // If H<V lines, then scrolling should be stuck on 0.
+        let canvas_height = self.canvas.height() as usize;
+        let viewport_height = area.height as usize;
+        if canvas_height < viewport_height {
+            self.scroll = 0;
+        } else if canvas_height - viewport_height <= self.scroll {
+            self.scroll = canvas_height - viewport_height;
+        }
 
-        while let Some(line) = iterator.next_back() {
-            if area.bottom() - rows < area.top() {
-                break;
-            }
+        let text_width = self.canvas.width();
 
-            assert!(line.len() <= width as usize);
-            assert!(!line.contains('\n'));
-            buf.set_string(area.left(), area.bottom() - rows, line, &Style::default());
-            rows += 1;
+        // Canvas should fit, with a single scrollbar
+        assert!(area.width == text_width + 1);
+
+        // Draw viewport
+        let viewport = self.canvas.render_viewport(
+            ViewportOptions::new(area.height)
+                .with_offset((canvas_height - viewport_height - self.scroll) as u16)
+                .with_rect_position(area.x, area.y),
+        );
+        for i in 0..viewport.content.len() {
+            let (x, y) = viewport.pos_of(i);
+            let global_index = buf.index_of(x, y);
+            buf.content[global_index] = viewport.content[i].clone();
         }
 
         // Draw scrollbar.
         if area.width > 10 {
-            let scrollbar_bottom = self.canvas.len() - self.scroll;
+            let scrollbar_bottom = canvas_height - self.scroll;
             let scrollbar_top = scrollbar_bottom.saturating_sub(area.height as usize);
             assert!(scrollbar_top <= scrollbar_bottom);
 
             let scrollbar_area = Rect::new(area.right() - 1, area.top(), 1, area.height);
             Scrollbar::default()
-                .set_total(self.canvas.len())
+                .set_total(canvas_height)
                 .set_shown_range(scrollbar_top..scrollbar_bottom)
                 .draw(&scrollbar_area, buf)
         }

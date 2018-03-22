@@ -5,6 +5,7 @@ extern crate tui;
 #[macro_use]
 extern crate serde_derive;
 
+mod canvas;
 mod widgets;
 mod layout;
 mod message_buffer;
@@ -136,4 +137,17 @@ impl App {
         layout::render(self, terminal);
         terminal.draw()
     }
+}
+
+#[allow(unused)]
+pub(crate) fn render_buffer(buf: &tui::buffer::Buffer) -> String {
+    let mut s = format!("Buffer area: {:?}\r\n", buf.area());
+    let width = buf.area().width;
+    for (i, cell) in buf.content().iter().enumerate() {
+        if i > 0 && i as u16 % width == 0 {
+            s.push_str("\r\n");
+        }
+        s.push(cell.symbol.chars().next().unwrap());
+    }
+    s
 }

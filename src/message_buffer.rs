@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
+use canvas::Canvas;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Message {
@@ -36,8 +37,15 @@ impl Ord for Message {
 }
 
 impl Message {
-    fn render_as_string(&self) -> String {
-        format!("{from}\n{text}\n", from = self.from, text = self.body)
+    fn render_as_canvas(&self, width: u16) -> Canvas {
+        use tui::style::*;
+
+        let underlined = Style::default().modifier(Modifier::Underline);
+        let mut canvas = Canvas::new(width);
+        canvas.add_string_truncated(&format!("{}\n", self.from), underlined);
+        canvas.add_string_wrapped(&format!("{}\n", self.body), Style::default());
+
+        canvas
     }
 }
 
@@ -54,29 +62,81 @@ impl Into<MessageBuffer> for Vec<Message> {
 }
 
 impl MessageBuffer {
-    pub fn render_into_canvas(&self, width: usize) -> Vec<String> {
-        // This is extremely inefficient and lazy and stupid.
-        // But it should be enough to experiment with the UI.
-        //
-        // Problems:
-        //  1. Strings are not word-wrapped, but instead wrapped at characters.
-        //  2. Full message is rendered first, *then* it is wrapped. The message renderer should
-        //     wrap immediately instead.
-        //  3. Allocating intermediary `Vec`s when we could append to a String right away.
-        //  4. Only when size changed since last time should we have to reflow all the messages.
-        //     Try to figure outt a buffering scheme where new messages are added at the end and
-        //     only cause a re-render at the end. Maybe. Something like that.
-        self.messages
-            .iter()
-            .map(|message| message.render_as_string())
-            .flat_map(|string| {
-                let mut chars = string.chars();
-                (0..)
-                    .map(|_| chars.by_ref().take(width).collect::<String>())
-                    .take_while(|s| !s.is_empty())
-                    .flat_map(|s| s.split("\n").map(String::from).collect::<Vec<_>>())
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>()
+    pub fn render_as_canvas(&self, width: u16) -> Canvas {
+        use tui::style::Style;
+
+        let mut canvas = Canvas::new(width);
+        for message in &self.messages {
+            canvas += message.render_as_canvas(width);
+            canvas.add_string_truncated("\n", Style::default());
+        }
+        canvas
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod message {
+        use super::*;
+
+        #[test]
+        fn it_renders_as_canvas() {
+            let message = Message {
+                from: "Bear Grylls".into(),
+                body: "I'm lost. I guess I have to drink my own urine. :)".into(),
+                timestamp: "1110000.0000".into(),
+            };
+
+            let big_canvas = message.render_as_canvas(50);
+            assert_eq!(
+                &big_canvas.render_to_string(Some("|")),
+                "Bear Grylls                                       |
+I'm lost. I guess I have to drink my own urine. :)|
+                                                  |",
+            );
+
+            let small_canvas = message.render_as_canvas(20);
+            assert_eq!(
+                &small_canvas.render_to_string(Some("|")),
+                "Bear Grylls         |
+I'm lost. I guess I |
+have to drink my own|
+ urine. :)          |",
+            );
+        }
+    }
+
+    mod message_buffer {
+        use super::*;
+
+        #[test]
+        fn it_renders_messages_as_canvas() {
+            let mut message_buffer = MessageBuffer {
+                messages: BTreeSet::new(),
+            };
+            message_buffer.messages.insert(Message {
+                from: "Example".into(),
+                body: "Hello...".into(),
+                timestamp: "1110000.0000".into(),
+            });
+            message_buffer.messages.insert(Message {
+                from: "Example".into(),
+                body: "...World!".into(),
+                timestamp: "1110001.0000".into(),
+            });
+
+            let canvas = message_buffer.render_as_canvas(10);
+            assert_eq!(
+                &canvas.render_to_string(Some("|")),
+                "Example   |
+Hello...  |
+          |
+Example   |
+...World! |
+          |"
+            );
+        }
     }
 }

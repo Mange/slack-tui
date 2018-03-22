@@ -4,9 +4,12 @@ version = "0.1.0"
 authors = ["Magnus Bergmark <magnus.bergmark@gmail.com>"]
 
 [dependencies]
-tui = "0.2.0"
 slack = "0.19.0"
 termion = "1.5.1"
 serde = "1.0.29"
 serde_yaml = "0.7.3"
 serde_derive = "1.0.29"
+
+[dependencies.tui]
+version = "0.2.0"
+path = "../tui-rs"

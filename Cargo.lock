@@ -504,7 +504,7 @@ dependencies = [
  "serde_yaml 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termion 1.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "tui 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tui 0.2.0",
 ]
 
 [[package]]
@@ -565,7 +565,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "tui"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cassowary 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -765,7 +764,6 @@ dependencies = [
 "checksum termion 1.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "689a3bdfaab439fd92bc87df5c4c78417d3cbe537487274e9b0b2dce76e92096"
 "checksum time 0.1.39 (registry+https://github.com/rust-lang/crates.io-index)" = "a15375f1df02096fb3317256ce2cee6a1f42fc84ea5ad5fc8c421cfe40c73098"
 "checksum traitobject 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
-"checksum tui 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3f9966ae5154d73d043bcf9cc8ea102b8f0e20f4515145c8049df644f027988a"
 "checksum tungstenite 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "c2beb7df7dc5f662285ac5359fd424789ba0cccddb6771e8f489a11eadf12261"
 "checksum typeable 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1410f6f91f21d1612654e7cc69193b0334f909dcf2c790c4826254fbb86f8887"
 "checksum unicase 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7f4765f83163b74f957c797ad9253caf97f103fb064d3999aea9568d09fc8a33"
