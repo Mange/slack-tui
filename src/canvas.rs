@@ -28,6 +28,7 @@ impl Canvas {
         self.cells.len() as u16 / self.width
     }
 
+    #[cfg(test)]
     pub fn get_pos(&self, x: u16, y: u16) -> Option<&Cell> {
         self.get_index(x, y).and_then(|i| self.cells.get(i))
     }
@@ -101,6 +102,7 @@ impl Canvas {
         s
     }
 
+    #[cfg(test)]
     fn get_index(&self, x: u16, y: u16) -> Option<usize> {
         if x < self.width {
             let index = y as usize * self.width as usize + x as usize;
