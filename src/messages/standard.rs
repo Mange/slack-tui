@@ -4,39 +4,39 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 use canvas::Canvas;
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct Message {
+pub struct StandardMessage {
     pub timestamp: String,
     pub from: String,
     pub body: String,
 }
 
-impl Hash for Message {
+impl Hash for StandardMessage {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.timestamp.hash(state)
     }
 }
 
-impl PartialEq for Message {
-    fn eq(&self, rhs: &Message) -> bool {
+impl PartialEq for StandardMessage {
+    fn eq(&self, rhs: &StandardMessage) -> bool {
         self.timestamp.eq(&rhs.timestamp)
     }
 }
 
-impl Eq for Message {}
+impl Eq for StandardMessage {}
 
-impl PartialOrd for Message {
-    fn partial_cmp(&self, rhs: &Message) -> Option<Ordering> {
+impl PartialOrd for StandardMessage {
+    fn partial_cmp(&self, rhs: &StandardMessage) -> Option<Ordering> {
         self.timestamp.partial_cmp(&rhs.timestamp)
     }
 }
 
-impl Ord for Message {
-    fn cmp(&self, rhs: &Message) -> Ordering {
+impl Ord for StandardMessage {
+    fn cmp(&self, rhs: &StandardMessage) -> Ordering {
         self.timestamp.cmp(&rhs.timestamp)
     }
 }
 
-impl Message {
+impl StandardMessage {
     pub fn render_as_canvas(&self, width: u16) -> Canvas {
         use tui::style::*;
 
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn it_renders_as_canvas() {
-        let message = Message {
+        let message = StandardMessage {
             from: "Bear Grylls".into(),
             body: "I'm lost. I guess I have to drink my own urine. :)".into(),
             timestamp: "1110000.0000".into(),

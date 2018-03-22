@@ -153,6 +153,7 @@ impl App {
                     event::Key::Char('j') => self.scroll_down(),
                     event::Key::Char('k') => self.scroll_up(),
                     event::Key::Char('b') => self.create_fake_message(),
+                    event::Key::Char('B') => self.add_loading_message(),
                     _ => {}
                 },
                 Event::Tick => {}
@@ -189,16 +190,23 @@ impl App {
         }
     }
 
+    fn add_loading_message(&mut self) {
+        let time = Local::now();
+
+        self.messages.add(messages::LoadingMessage {
+            from_timestamp: time.timestamp_subsec_millis().to_string(),
+        });
+        self.chat_canvas.replace(None);
+    }
+
     fn create_fake_message(&mut self) {
         let time = Local::now();
 
-        let message = messages::Message {
+        self.messages.add(messages::StandardMessage {
             from: "Fake Message".into(),
             body: format!("This is a fake message generated at: {}", time),
             timestamp: time.timestamp_subsec_millis().to_string(),
-        };
-
-        self.messages.add(message);
+        });
         self.chat_canvas.replace(None);
     }
 

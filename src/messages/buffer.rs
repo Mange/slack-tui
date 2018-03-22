@@ -14,8 +14,8 @@ impl Buffer {
         }
     }
 
-    pub fn add(&mut self, message: Message) {
-        self.messages.insert(message);
+    pub fn add<M: Into<Message>>(&mut self, message: M) {
+        self.messages.insert(message.into());
     }
 
     pub fn render_as_canvas(&self, width: u16) -> Canvas {
@@ -39,16 +39,20 @@ mod tests {
         let mut message_buffer = Buffer {
             messages: BTreeSet::new(),
         };
-        message_buffer.messages.insert(Message {
-            from: "Example".into(),
-            body: "Hello...".into(),
-            timestamp: "1110000.0000".into(),
-        });
-        message_buffer.messages.insert(Message {
-            from: "Example".into(),
-            body: "...World!".into(),
-            timestamp: "1110001.0000".into(),
-        });
+        message_buffer
+            .messages
+            .insert(Message::Standard(StandardMessage {
+                from: "Example".into(),
+                body: "Hello...".into(),
+                timestamp: "1110000.0000".into(),
+            }));
+        message_buffer
+            .messages
+            .insert(Message::Standard(StandardMessage {
+                from: "Example".into(),
+                body: "...World!".into(),
+                timestamp: "1110001.0000".into(),
+            }));
 
         let canvas = message_buffer.render_as_canvas(10);
         assert_eq!(
