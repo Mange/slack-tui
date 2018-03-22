@@ -1,4 +1,4 @@
-use super::App;
+use super::{App, Mode};
 use super::TerminalBackend;
 use widgets::{self, ChatHistory};
 
@@ -16,6 +16,19 @@ pub fn render(app: &App, terminal: &mut TerminalBackend) {
             render_sidebar(app, terminal, &chunks[0]);
             render_main(app, terminal, &chunks[1]);
         });
+
+    if app.current_mode == Mode::SelectChannel {
+        let mut selector_rect = size.clone();
+        // Pick the largest out of 50% and X cells in both directions, but also cap it to display
+        // size if it's smaller than the intended minimum.
+        selector_rect.width = (size.width / 2).max(40).min(size.width);
+        selector_rect.height = (size.height / 2).max(20).min(size.height);
+        // Center selector in the middle of parent size
+        selector_rect.x = (size.x + size.width / 2) - (selector_rect.width / 2);
+        selector_rect.y = (size.y + size.height / 2) - (selector_rect.height / 2);
+
+        render_channel_selector(app, terminal, &selector_rect);
+    }
 }
 
 fn render_sidebar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
@@ -40,7 +53,7 @@ fn render_main(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
             render_history(app, terminal, &chunks[1]);
             render_statusbar(app, terminal, &chunks[2]);
             render_input(app, terminal, &chunks[3]);
-        })
+        });
 }
 
 fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
@@ -83,9 +96,17 @@ fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
         .render(terminal, rect);
 }
 
-fn render_statusbar(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_statusbar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+    let (mode, mode_color) = match app.current_mode {
+        Mode::History => ("HISTORY", "bg=cyan;fg=black"),
+        Mode::SelectChannel => ("CHANNELS", "bg=black;fg=white"),
+    };
     Paragraph::default()
-        .text("{mod=bold [NORMAL]} - {fg=dark_gray Peter is typing...}")
+        .text(&format!(
+            "{{{mode_color} [{mode}]}} - {{fg=dark_gray Peter is typing...}}",
+            mode = mode,
+            mode_color = mode_color
+        ))
         .style(Style::default().bg(Color::Gray).fg(Color::White))
         .render(terminal, rect);
 }
@@ -94,5 +115,16 @@ fn render_input(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     Paragraph::default()
         .text("{fg=dark_gray Enter a reply...}")
         .style(Style::default().bg(Color::Black).fg(Color::White))
+        .render(terminal, rect);
+}
+
+fn render_channel_selector(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+    let black_on_white = Style::default().bg(Color::White).fg(Color::Black);
+    Block::default()
+        .title("Select channel")
+        .borders(Borders::ALL)
+        .style(black_on_white)
+        .border_style(black_on_white)
+        .title_style(black_on_white)
         .render(terminal, rect);
 }

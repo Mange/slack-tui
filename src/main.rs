@@ -41,10 +41,17 @@ enum Event {
     Disconnected,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum Mode {
+    History,
+    SelectChannel,
+}
+
 pub struct App {
     size: Rect,
     messages: messages::Buffer,
     history_scroll: usize,
+    current_mode: Mode,
     chat_canvas: RefCell<Option<Canvas>>,
     last_chat_height: Cell<u16>,
     channels: ChannelList,
@@ -111,6 +118,7 @@ fn main() {
     let size = terminal.size().unwrap();
     let mut app = App {
         history_scroll: 0,
+        current_mode: Mode::History,
         messages: messages::Buffer::new(),
         chat_canvas: RefCell::new(None),
         last_chat_height: Cell::new(0),
@@ -173,6 +181,8 @@ impl App {
                     event::Key::Char('k') => self.scroll_up(),
                     event::Key::Char('b') => self.create_fake_message(),
                     event::Key::Char('B') => self.add_loading_message(),
+                    event::Key::Ctrl('k') => self.enter_mode(Mode::SelectChannel),
+                    event::Key::Esc => self.enter_mode(Mode::History),
                     _ => {}
                 },
                 Event::Connected => self.add_loading_message(),
@@ -187,6 +197,10 @@ impl App {
         terminal.show_cursor()?;
         terminal.clear()?;
         Ok(())
+    }
+
+    fn enter_mode(&mut self, new_mode: Mode) {
+        self.current_mode = new_mode;
     }
 
     fn scroll_down(&mut self) {

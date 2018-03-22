@@ -4,8 +4,6 @@ mod standard;
 
 use std::cmp::{Ord, Ordering, PartialOrd};
 
-use tui::style::*;
-
 use canvas::Canvas;
 
 pub use self::buffer::Buffer;
