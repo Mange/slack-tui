@@ -55,6 +55,12 @@ impl App {
             .min(self.last_chat_height.get() as usize)
     }
 
+    fn selected_channel(&self) -> Option<&Channel> {
+        self.selected_channel_id
+            .as_ref()
+            .and_then(|id| self.channels.get(id))
+    }
+
     fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
         // Populate RefCell inside this scope when not present.
         {

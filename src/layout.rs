@@ -2,9 +2,9 @@ use super::App;
 use super::TerminalBackend;
 use widgets::{self, ChatHistory};
 
-use tui::widgets::{Block, Borders, Paragraph, SelectableList, Widget};
+use tui::widgets::{Block, Borders, Paragraph, Widget};
 use tui::layout::{Direction, Group, Rect, Size};
-use tui::style::{Color, Modifier, Style};
+use tui::style::*;
 
 pub fn render(app: &App, terminal: &mut TerminalBackend) {
     let size = &app.size;
@@ -43,11 +43,31 @@ fn render_main(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
         })
 }
 
-fn render_breadcrumbs(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    Paragraph::default()
-        .text("Hemnet > #random [Talk about anything]")
-        .style(Style::default().bg(Color::Gray).modifier(Modifier::Bold))
-        .render(terminal, rect);
+fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+    let team_name = "My Team";
+    match app.selected_channel() {
+        Some(channel) => {
+            let topic = match channel.topic_text() {
+                Some(text) => format!("{{fg=white {}}}", text),
+                None => String::from("{fg=gray No channel topic}"),
+            };
+            Paragraph::default()
+                .text(&format!(
+                    "{{mod=bold {team}}} > {{mod=bold #{channel}}} [{topic}]",
+                    team = team_name,
+                    channel = channel.name(),
+                    topic = topic
+                ))
+                .style(Style::default().bg(Color::Gray).fg(Color::White))
+                .render(terminal, rect);
+        }
+        None => {
+            Paragraph::default()
+                .text(&format!("{} > (No channel selected)", team_name))
+                .style(Style::default().bg(Color::Gray).fg(Color::White))
+                .render(terminal, rect);
+        }
+    }
 }
 
 fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {

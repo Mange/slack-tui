@@ -1,5 +1,5 @@
 extern crate slack;
-use slack::api::Channel as SlackChannel;
+use slack::api::{Channel as SlackChannel, ChannelTopic};
 
 use std::hash::{Hash, Hasher};
 use std::collections::BTreeMap;
@@ -15,6 +15,7 @@ pub struct Channel {
     is_member: bool,
     is_starred: bool,
     has_unreads: bool,
+    topic_text: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -36,9 +37,15 @@ impl Channel {
             None => return None,
         };
 
+        let topic_text = match channel.topic {
+            Some(ChannelTopic { ref value, .. }) => value.clone(),
+            None => None,
+        };
+
         Some(Channel {
             id,
             name,
+            topic_text,
             is_starred: false, // TODO. Needs to be read using Slack API stars.list
             has_unreads: channel.unread_count.unwrap_or(0) > 0,
             is_member: channel.is_member.unwrap_or(false),
@@ -51,6 +58,10 @@ impl Channel {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn topic_text(&self) -> Option<&str> {
+        self.topic_text.as_ref().map(String::as_ref)
     }
 
     pub fn is_member(&self) -> bool {
@@ -76,6 +87,10 @@ impl ChannelList {
 
     pub fn iter(&self) -> Iter {
         self.channels.iter()
+    }
+
+    pub fn get(&self, id: &ChannelID) -> Option<&Channel> {
+        self.channels.get(id)
     }
 }
 
