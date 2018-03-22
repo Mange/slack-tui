@@ -1,4 +1,6 @@
 extern crate chrono;
+extern crate dotenv;
+extern crate slack;
 extern crate termion;
 extern crate tui;
 
@@ -6,6 +8,7 @@ extern crate tui;
 extern crate serde_derive;
 
 mod canvas;
+mod chat;
 mod widgets;
 mod layout;
 mod messages;
@@ -21,10 +24,13 @@ use tui::Terminal;
 use tui::backend::MouseBackend;
 use tui::layout::Rect;
 
+use slack::api as slack_api;
+
 use termion::event;
 use termion::input::TermRead;
 
 use canvas::Canvas;
+use chat::{Channel, ChannelID, ChannelList};
 
 pub type TerminalBackend = Terminal<MouseBackend>;
 
@@ -39,6 +45,8 @@ pub struct App {
     history_scroll: usize,
     chat_canvas: RefCell<Option<Canvas>>,
     last_chat_height: Cell<u16>,
+    channels: ChannelList,
+    selected_channel_id: Option<ChannelID>,
 }
 
 impl App {
@@ -61,11 +69,21 @@ impl App {
 
         Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
     }
+
+    fn prepopulate(&mut self, response: slack_api::rtm::StartResponse) {
+        if let Some(channels) = response.channels {
+            self.channels = channels.iter().flat_map(Channel::from_slack).collect();
+            self.selected_channel_id = channels
+                .get(0)
+                .and_then(|c| c.id.clone().map(ChannelID::from));
+        }
+    }
 }
 
 fn main() {
-    let backend = MouseBackend::new().unwrap();
-    let terminal = Terminal::new(backend).unwrap();
+    dotenv::dotenv().ok();
+
+    let terminal = Terminal::new(MouseBackend::new().unwrap()).unwrap();
 
     let size = terminal.size().unwrap();
     let mut app = App {
@@ -73,6 +91,8 @@ fn main() {
         messages: messages::Buffer::new(),
         chat_canvas: RefCell::new(None),
         last_chat_height: Cell::new(0),
+        channels: ChannelList::new(),
+        selected_channel_id: None,
         size,
     };
     app.run(terminal).unwrap();
@@ -80,6 +100,12 @@ fn main() {
 
 impl App {
     fn run(&mut self, mut terminal: TerminalBackend) -> Result<(), io::Error> {
+        let rtm = match slack::RtmClient::login(&::std::env::var("SLACK_API_TOKEN").unwrap()) {
+            Ok(client) => client,
+            Err(error) => panic!("Failed to login to Slack: {}", error),
+        };
+        self.prepopulate(rtm.start_response().clone());
+
         terminal.clear()?;
         terminal.hide_cursor()?;
 
@@ -96,6 +122,7 @@ impl App {
                 }
             }
         });
+
         thread::spawn(move || {
             let tx = tx.clone();
             loop {

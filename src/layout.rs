@@ -18,11 +18,18 @@ pub fn render(app: &App, terminal: &mut TerminalBackend) {
         });
 }
 
-fn render_sidebar(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_sidebar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+    let (selected, entries) = app.channels
+        .entries_with_selected(app.selected_channel_id.as_ref());
+    let names = entries
+        .into_iter()
+        .map(|entry| entry.name)
+        .collect::<Vec<_>>();
+
     SelectableList::default()
         .block(Block::default().title("Channels").borders(Borders::RIGHT))
-        .items(&["#env-production", "#random", "#api-v3", "#team-core"])
-        .select(1)
+        .items(&names)
+        .select(selected)
         .style(Style::default().fg(Color::White))
         .highlight_style(
             Style::default()
