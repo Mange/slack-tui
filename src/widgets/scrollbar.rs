@@ -69,7 +69,8 @@ impl Scrollbar {
     }
 
     fn ratio_below(&self) -> f64 {
-        1.0 - self.ratio_above() - self.ratio_shown()
+        // Due to float rounding errors ratio_above + ratio_shown can be >1.0
+        (1.0 - self.ratio_above() - self.ratio_shown()).max(0.0)
     }
 }
 
@@ -209,5 +210,27 @@ mod tests {
                 height
             );
         }
+    }
+
+    #[test]
+    fn it_deals_with_float_rounding_errors() {
+        let mut scrollbar = Scrollbar::default();
+        scrollbar.set_total(398).set_shown_range(377..398);
+
+        assert!(
+            scrollbar.ratio_above() >= 0.0,
+            "Ratio above was negative: {}",
+            scrollbar.ratio_above()
+        );
+        assert!(
+            scrollbar.ratio_shown() >= 0.0,
+            "Ratio shown was negative: {}",
+            scrollbar.ratio_shown()
+        );
+        assert!(
+            scrollbar.ratio_below() >= 0.0,
+            "Ratio below was negative: {}",
+            scrollbar.ratio_below()
+        );
     }
 }
