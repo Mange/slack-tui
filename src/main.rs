@@ -16,7 +16,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time;
 use std::fs::File;
-use std::cell::{Ref, RefCell};
+use std::cell::{Cell, Ref, RefCell};
 
 use tui::Terminal;
 use tui::backend::MouseBackend;
@@ -40,10 +40,16 @@ pub struct App {
     messages: MessageBuffer,
     history_scroll: usize,
     chat_canvas: RefCell<Option<Canvas>>,
+    last_chat_height: Cell<u16>,
 }
 
 impl App {
-    fn rendered_chat_canvas(&self, width: u16) -> Ref<Canvas> {
+    fn current_history_scroll(&self) -> usize {
+        self.history_scroll
+            .min(self.last_chat_height.get() as usize)
+    }
+
+    fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
         // Populate RefCell inside this scope when not present.
         {
             let mut cache = self.chat_canvas.borrow_mut();
@@ -52,6 +58,8 @@ impl App {
                 *cache = Some(canvas);
             }
         }
+
+        self.last_chat_height.replace(height);
 
         Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
     }
@@ -69,7 +77,7 @@ fn main() {
 
     let mut messages = load_fixtures();
 
-    for n in 0..50 {
+    for n in 0..10 {
         messages.insert(
             n,
             Message {
@@ -85,6 +93,7 @@ fn main() {
         history_scroll: 0,
         messages: messages.into(),
         chat_canvas: RefCell::new(None),
+        last_chat_height: Cell::new(0),
         size,
     };
     app.run(terminal).unwrap();
@@ -143,14 +152,27 @@ impl App {
 
     fn scroll_down(&mut self) {
         // NOTE: Scroll value is distance from bottom
-        self.history_scroll = self.history_scroll.saturating_sub(1);
+        self.history_scroll = self.current_history_scroll().saturating_sub(1);
     }
 
     fn scroll_up(&mut self) {
         // NOTE: Scroll value is distance from bottom
-        // TODO: How to prevent scrolling past the end of the history? Do we need to render a
-        // canvas here too?
-        self.history_scroll = self.history_scroll.saturating_add(1);
+        let chat_canvas_height = {
+            let last_canvas = self.chat_canvas.borrow();
+            if last_canvas.is_none() {
+                return;
+            }
+            last_canvas.as_ref().unwrap().height()
+        };
+        let chat_viewport_height = self.last_chat_height.get();
+
+        // If the canvas is smaller than the viewport, lock to bottom.
+        if chat_canvas_height <= chat_viewport_height {
+            self.history_scroll = 0;
+        } else {
+            let max_scroll = chat_canvas_height - chat_viewport_height;
+            self.history_scroll = (self.current_history_scroll() + 1).min(max_scroll as usize);
+        }
     }
 
     fn draw(&mut self, terminal: &mut TerminalBackend) -> Result<(), io::Error> {

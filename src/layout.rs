@@ -62,10 +62,10 @@ fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     }
 
     // Leave one width for scrollbar
-    let canvas = app.rendered_chat_canvas(rect.width - 1);
+    let canvas = app.rendered_chat_canvas(rect.width - 1, rect.height);
 
     ChatHistory::with_canvas(&canvas)
-        .scroll(app.history_scroll)
+        .scroll(app.current_history_scroll())
         .render(terminal, rect);
 }
 

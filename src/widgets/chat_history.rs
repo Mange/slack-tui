@@ -27,17 +27,8 @@ impl<'a> Widget for ChatHistory<'a> {
             return;
         }
 
-        // Prevent scrolling past the canvas
-        // Canvas of height H, viewport of V, then we cannot scroll past (H-V) since V lines are
-        // shown, making top line the first line of the canvas.
-        // If H<V lines, then scrolling should be stuck on 0.
         let canvas_height = self.canvas.height() as usize;
         let viewport_height = area.height as usize;
-        if canvas_height < viewport_height {
-            self.scroll = 0;
-        } else if canvas_height - viewport_height <= self.scroll {
-            self.scroll = canvas_height - viewport_height;
-        }
 
         let text_width = self.canvas.width();
 
