@@ -1,6 +1,6 @@
 use super::App;
 use super::TerminalBackend;
-use widgets::ChatHistory;
+use widgets::{self, ChatHistory};
 
 use tui::widgets::{Block, Borders, Paragraph, SelectableList, Widget};
 use tui::layout::{Direction, Group, Rect, Size};
@@ -19,24 +19,11 @@ pub fn render(app: &App, terminal: &mut TerminalBackend) {
 }
 
 fn render_sidebar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    let (selected, entries) = app.channels
-        .entries_with_selected(app.selected_channel_id.as_ref());
-    let names = entries
-        .into_iter()
-        .map(|entry| entry.name)
-        .collect::<Vec<_>>();
+    let mut block = Block::default().borders(Borders::RIGHT);
+    block.render(terminal, rect);
 
-    SelectableList::default()
-        .block(Block::default().title("Channels").borders(Borders::RIGHT))
-        .items(&names)
-        .select(selected)
-        .style(Style::default().fg(Color::White))
-        .highlight_style(
-            Style::default()
-                .modifier(Modifier::Italic)
-                .modifier(Modifier::Invert),
-        )
-        .render(terminal, rect)
+    widgets::ChannelList::new(&app.channels, app.selected_channel_id.as_ref())
+        .render(terminal, &block.inner(rect));
 }
 
 fn render_main(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
@@ -59,7 +46,7 @@ fn render_main(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
 fn render_breadcrumbs(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     Paragraph::default()
         .text("Hemnet > #random [Talk about anything]")
-        .style(Style::default().bg(Color::Gray).fg(Color::White))
+        .style(Style::default().bg(Color::Gray).modifier(Modifier::Bold))
         .render(terminal, rect);
 }
 

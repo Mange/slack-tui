@@ -74,7 +74,8 @@ impl App {
         if let Some(channels) = response.channels {
             self.channels = channels.iter().flat_map(Channel::from_slack).collect();
             self.selected_channel_id = channels
-                .get(0)
+                .iter()
+                .find(|c| c.is_member.unwrap_or(false))
                 .and_then(|c| c.id.clone().map(ChannelID::from));
         }
     }
