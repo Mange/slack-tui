@@ -37,6 +37,8 @@ pub type TerminalBackend = Terminal<MouseBackend>;
 enum Event {
     Tick,
     Input(event::Key),
+    Connected,
+    Disconnected,
 }
 
 pub struct App {
@@ -87,6 +89,20 @@ impl App {
     }
 }
 
+struct SlackEventHandler {
+    tx: mpsc::Sender<Event>,
+}
+
+impl slack::EventHandler for SlackEventHandler {
+    fn on_connect(&mut self, rtm: &slack::RtmClient) {
+        self.tx.send(Event::Connected);
+    }
+    fn on_close(&mut self, rtm: &slack::RtmClient) {
+        self.tx.send(Event::Disconnected);
+    }
+    fn on_event(&mut self, rtm: &slack::RtmClient, slack_event: slack::Event) {}
+}
+
 fn main() {
     dotenv::dotenv().ok();
 
@@ -130,12 +146,15 @@ impl App {
             }
         });
 
+        let timer_tx = tx.clone();
+        thread::spawn(move || loop {
+            timer_tx.send(Event::Tick).unwrap();
+            thread::sleep(time::Duration::from_millis(200));
+        });
+
+        let slack_tx = tx.clone();
         thread::spawn(move || {
-            let tx = tx.clone();
-            loop {
-                tx.send(Event::Tick).unwrap();
-                thread::sleep(time::Duration::from_millis(200));
-            }
+            rtm.run(&mut SlackEventHandler { tx: slack_tx });
         });
 
         loop {
@@ -156,6 +175,11 @@ impl App {
                     event::Key::Char('B') => self.add_loading_message(),
                     _ => {}
                 },
+                Event::Connected => self.add_loading_message(),
+                Event::Disconnected => {
+                    // TODO: Show disonnected status, try to reconnect, etc.
+                    break;
+                }
                 Event::Tick => {}
             }
         }
