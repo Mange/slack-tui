@@ -29,6 +29,7 @@ impl<'a> Widget for ChatHistory<'a> {
 
         let canvas_height = self.canvas.height() as usize;
         let viewport_height = area.height as usize;
+        let scroll_from_top = (canvas_height - self.scroll).saturating_sub(viewport_height);
 
         let text_width = self.canvas.width();
 
@@ -38,7 +39,7 @@ impl<'a> Widget for ChatHistory<'a> {
         // Draw viewport
         let viewport = self.canvas.render_viewport(
             ViewportOptions::new(area.height)
-                .with_offset((canvas_height - viewport_height - self.scroll) as u16)
+                .with_offset((scroll_from_top) as u16)
                 .with_rect_position(area.x, area.y),
         );
         for i in 0..viewport.content.len() {
