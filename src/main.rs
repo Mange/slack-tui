@@ -16,6 +16,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time;
 use std::fs::File;
+use std::cell::{Ref, RefCell};
 
 use tui::Terminal;
 use tui::backend::MouseBackend;
@@ -25,6 +26,7 @@ use termion::event;
 use termion::input::TermRead;
 
 use message_buffer::{Message, MessageBuffer};
+use canvas::Canvas;
 
 pub type TerminalBackend = Terminal<MouseBackend>;
 
@@ -37,6 +39,22 @@ pub struct App {
     size: Rect,
     messages: MessageBuffer,
     history_scroll: usize,
+    chat_canvas: RefCell<Option<Canvas>>,
+}
+
+impl App {
+    fn rendered_chat_canvas(&self, width: u16) -> Ref<Canvas> {
+        // Populate RefCell inside this scope when not present.
+        {
+            let mut cache = self.chat_canvas.borrow_mut();
+            if cache.is_none() {
+                let canvas = self.messages.render_as_canvas(width);
+                *cache = Some(canvas);
+            }
+        }
+
+        Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
+    }
 }
 
 fn load_fixtures() -> Vec<Message> {
@@ -66,6 +84,7 @@ fn main() {
     let mut app = App {
         history_scroll: 0,
         messages: messages.into(),
+        chat_canvas: RefCell::new(None),
         size,
     };
     app.run(terminal).unwrap();
@@ -102,6 +121,7 @@ impl App {
             if size != self.size {
                 terminal.resize(size)?;
                 self.size = size;
+                self.chat_canvas.replace(None);
             }
             self.draw(&mut terminal)?;
             let evt = rx.recv().unwrap();
