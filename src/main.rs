@@ -8,6 +8,7 @@ extern crate tui;
 extern crate serde_derive;
 
 mod canvas;
+mod channel_selector;
 mod chat;
 mod input_manager;
 mod layout;
@@ -33,6 +34,7 @@ use termion::input::TermRead;
 use canvas::Canvas;
 use chat::{Channel, ChannelID, ChannelList};
 use input_manager::KeyManager;
+use channel_selector::ChannelSelector;
 
 pub type TerminalBackend = Terminal<MouseBackend>;
 
@@ -50,52 +52,17 @@ enum Mode {
 }
 
 pub struct App {
-    size: Rect,
-    messages: messages::Buffer,
-    history_scroll: usize,
-    current_mode: Mode,
-    chat_canvas: RefCell<Option<Canvas>>,
-    last_chat_height: Cell<u16>,
     channels: ChannelList,
+    chat_canvas: RefCell<Option<Canvas>>,
+    current_mode: Mode,
+    history_scroll: usize,
+    last_chat_height: Cell<u16>,
+    messages: messages::Buffer,
     selected_channel_id: Option<ChannelID>,
-}
+    size: Rect,
 
-impl App {
-    fn current_history_scroll(&self) -> usize {
-        self.history_scroll
-            .min(self.last_chat_height.get() as usize)
-    }
-
-    fn selected_channel(&self) -> Option<&Channel> {
-        self.selected_channel_id
-            .as_ref()
-            .and_then(|id| self.channels.get(id))
-    }
-
-    fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
-        // Populate RefCell inside this scope when not present.
-        {
-            let mut cache = self.chat_canvas.borrow_mut();
-            if cache.is_none() {
-                let canvas = self.messages.render_as_canvas(width);
-                *cache = Some(canvas);
-            }
-        }
-
-        self.last_chat_height.replace(height);
-
-        Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
-    }
-
-    fn prepopulate(&mut self, response: slack_api::rtm::StartResponse) {
-        if let Some(channels) = response.channels {
-            self.channels = channels.iter().flat_map(Channel::from_slack).collect();
-            self.selected_channel_id = channels
-                .iter()
-                .find(|c| c.is_member.unwrap_or(false))
-                .and_then(|c| c.id.clone().map(ChannelID::from));
-        }
-    }
+    // For Mode::SelectChannel
+    channel_selector: ChannelSelector,
 }
 
 struct SlackEventHandler {
@@ -119,12 +86,13 @@ fn main() {
 
     let size = terminal.size().unwrap();
     let mut app = App {
-        history_scroll: 0,
-        current_mode: Mode::History,
-        messages: messages::Buffer::new(),
-        chat_canvas: RefCell::new(None),
-        last_chat_height: Cell::new(0),
+        channel_selector: ChannelSelector::new(),
         channels: ChannelList::new(),
+        chat_canvas: RefCell::new(None),
+        current_mode: Mode::History,
+        history_scroll: 0,
+        last_chat_height: Cell::new(0),
+        messages: messages::Buffer::new(),
         selected_channel_id: None,
         size,
     };
@@ -150,9 +118,6 @@ impl App {
             for c in stdin.keys() {
                 let evt = c.unwrap();
                 input_tx.send(Event::Input(evt)).unwrap();
-                if evt == event::Key::Char('q') {
-                    break;
-                }
             }
         });
 
@@ -195,6 +160,42 @@ impl App {
         terminal.show_cursor()?;
         terminal.clear()?;
         Ok(())
+    }
+
+    fn current_history_scroll(&self) -> usize {
+        self.history_scroll
+            .min(self.last_chat_height.get() as usize)
+    }
+
+    fn selected_channel(&self) -> Option<&Channel> {
+        self.selected_channel_id
+            .as_ref()
+            .and_then(|id| self.channels.get(id))
+    }
+
+    fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
+        // Populate RefCell inside this scope when not present.
+        {
+            let mut cache = self.chat_canvas.borrow_mut();
+            if cache.is_none() {
+                let canvas = self.messages.render_as_canvas(width);
+                *cache = Some(canvas);
+            }
+        }
+
+        self.last_chat_height.replace(height);
+
+        Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
+    }
+
+    fn prepopulate(&mut self, response: slack_api::rtm::StartResponse) {
+        if let Some(channels) = response.channels {
+            self.channels = channels.iter().flat_map(Channel::from_slack).collect();
+            self.selected_channel_id = channels
+                .iter()
+                .find(|c| c.is_member.unwrap_or(false))
+                .and_then(|c| c.id.clone().map(ChannelID::from));
+        }
     }
 
     fn enter_mode(&mut self, new_mode: Mode) {

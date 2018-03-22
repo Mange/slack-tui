@@ -39,7 +39,18 @@ impl KeyManager {
     pub fn handle_select_channel_key(&mut self, app: &mut App, input: event::Key) -> Outcome {
         use event::Key::*;
         match input {
-            Esc => app.enter_mode(Mode::History),
+            Char(chr) => app.channel_selector.add_character(chr),
+            Backspace => app.channel_selector.delete_character(),
+            Ctrl('w') => app.channel_selector.delete_word(),
+            Ctrl('a') => app.channel_selector.move_to_beginning(),
+            Ctrl('e') => app.channel_selector.move_to_end(),
+            Ctrl('k') => app.channel_selector.reset(),
+            Left => app.channel_selector.move_cursor_left(),
+            Right => app.channel_selector.move_cursor_right(),
+            Esc => {
+                app.channel_selector.reset();
+                app.enter_mode(Mode::History);
+            }
             _ => {}
         }
         Outcome::Continue

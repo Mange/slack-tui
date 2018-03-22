@@ -118,13 +118,31 @@ fn render_input(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
         .render(terminal, rect);
 }
 
-fn render_channel_selector(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    let black_on_white = Style::default().bg(Color::White).fg(Color::Black);
+fn render_channel_selector(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+    if rect.width < 5 {
+        return;
+    }
+
+    let black_on_gray = Style::default().bg(Color::Gray).fg(Color::Black);
+    let white_on_black = Style::default().bg(Color::Black).fg(Color::White);
+
     Block::default()
         .title("Select channel")
         .borders(Borders::ALL)
-        .style(black_on_white)
-        .border_style(black_on_white)
-        .title_style(black_on_white)
+        .style(black_on_gray)
+        .border_style(black_on_gray)
+        .title_style(black_on_gray)
         .render(terminal, rect);
+
+    let input_rect = Rect::new(
+        rect.left() + 1,
+        rect.top() + 1,
+        rect.width - 2,
+        rect.height - 2,
+    );
+    widgets::LineEdit::default()
+        .style(white_on_black)
+        .text(app.channel_selector.text())
+        .cursor_pos(app.channel_selector.cursor_pos())
+        .render(terminal, &input_rect);
 }
