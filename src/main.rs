@@ -9,9 +9,10 @@ extern crate serde_derive;
 
 mod canvas;
 mod chat;
-mod widgets;
+mod input_manager;
 mod layout;
 mod messages;
+mod widgets;
 
 use std::io;
 use std::sync::mpsc;
@@ -31,6 +32,7 @@ use termion::input::TermRead;
 
 use canvas::Canvas;
 use chat::{Channel, ChannelID, ChannelList};
+use input_manager::KeyManager;
 
 pub type TerminalBackend = Terminal<MouseBackend>;
 
@@ -165,6 +167,8 @@ impl App {
             rtm.run(&mut SlackEventHandler { tx: slack_tx });
         });
 
+        let mut key_manager = KeyManager::new();
+
         loop {
             let size = terminal.size()?;
             if size != self.size {
@@ -175,15 +179,9 @@ impl App {
             self.draw(&mut terminal)?;
             let evt = rx.recv().unwrap();
             match evt {
-                Event::Input(input) => match input {
-                    event::Key::Char('q') => break,
-                    event::Key::Char('j') => self.scroll_down(),
-                    event::Key::Char('k') => self.scroll_up(),
-                    event::Key::Char('b') => self.create_fake_message(),
-                    event::Key::Char('B') => self.add_loading_message(),
-                    event::Key::Ctrl('k') => self.enter_mode(Mode::SelectChannel),
-                    event::Key::Esc => self.enter_mode(Mode::History),
-                    _ => {}
+                Event::Input(input) => match key_manager.handle_key(self, input) {
+                    input_manager::Outcome::Continue => {}
+                    input_manager::Outcome::Quit => break,
                 },
                 Event::Connected => self.add_loading_message(),
                 Event::Disconnected => {
