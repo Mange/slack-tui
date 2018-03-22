@@ -297,7 +297,6 @@ mod tests {
 
     #[test]
     fn it_continues_on_last_line() {
-        let mut canvas = Canvas::new(10);
         let style = Style::default();
 
         let mut canvas = Canvas::new(10);
@@ -329,7 +328,6 @@ mod tests {
 
     #[test]
     fn it_wraps_existing_lines() {
-        let mut canvas = Canvas::new(10);
         let style = Style::default();
 
         let mut canvas = Canvas::new(10);

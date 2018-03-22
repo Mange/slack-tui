@@ -8,7 +8,7 @@ extern crate serde_derive;
 mod canvas;
 mod widgets;
 mod layout;
-mod message_buffer;
+mod messages;
 
 use std::io;
 use std::io::BufReader;
@@ -25,7 +25,7 @@ use tui::layout::Rect;
 use termion::event;
 use termion::input::TermRead;
 
-use message_buffer::{Message, MessageBuffer};
+use messages::Message;
 use canvas::Canvas;
 
 pub type TerminalBackend = Terminal<MouseBackend>;
@@ -37,7 +37,7 @@ enum Event {
 
 pub struct App {
     size: Rect,
-    messages: MessageBuffer,
+    messages: messages::Buffer,
     history_scroll: usize,
     chat_canvas: RefCell<Option<Canvas>>,
     last_chat_height: Cell<u16>,
