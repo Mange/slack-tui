@@ -2,7 +2,7 @@ use super::{App, Mode};
 use super::TerminalBackend;
 use widgets::{self, ChatHistory};
 
-use tui::widgets::{Block, Borders, Paragraph, Widget};
+use tui::widgets::*;
 use tui::layout::{Direction, Group, Rect, Size};
 use tui::style::*;
 
@@ -119,7 +119,7 @@ fn render_input(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
 }
 
 fn render_channel_selector(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    if rect.width < 5 {
+    if rect.width <= 5 || rect.height <= 5 {
         return;
     }
 
@@ -134,15 +134,40 @@ fn render_channel_selector(app: &App, terminal: &mut TerminalBackend, rect: &Rec
         .title_style(black_on_gray)
         .render(terminal, rect);
 
-    let input_rect = Rect::new(
-        rect.left() + 1,
-        rect.top() + 1,
-        rect.width - 2,
-        rect.height - 2,
-    );
+    let input_rect = Rect::new(rect.left() + 1, rect.top() + 1, rect.width - 2, 1);
     widgets::LineEdit::default()
         .style(white_on_black)
         .text(app.channel_selector.text())
         .cursor_pos(app.channel_selector.cursor_pos())
         .render(terminal, &input_rect);
+
+    let list_rect = Rect::new(
+        rect.left() + 1,
+        rect.top() + 3,
+        rect.width - 2,
+        rect.height - 4,
+    );
+
+    // SelectableList does not render background style.
+    // https://github.com/fdehau/tui-rs/issues/42
+    //
+    // Pad all items with spaces to achieve the same effect.
+    let matches: Vec<String> = app.channel_selector
+        .top_matches(&app.channels, list_rect.height as usize)
+        .into_iter()
+        .map(|m| format!("#{:<1$}", m.channel.name(), list_rect.width as usize))
+        .collect();
+
+    SelectableList::default()
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(black_on_gray)
+                .style(black_on_gray),
+        )
+        .style(black_on_gray)
+        .highlight_style(white_on_black)
+        .items(&matches)
+        .select(app.channel_selector.selected_index(matches.len()))
+        .render(terminal, &list_rect);
 }

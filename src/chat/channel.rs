@@ -52,6 +52,18 @@ impl Channel {
         })
     }
 
+    #[cfg(test)]
+    pub fn fixture(id: &str, name: &str) -> Channel {
+        Channel {
+            id: ChannelID::from(id),
+            name: String::from(name),
+            is_member: false,
+            is_starred: false,
+            has_unreads: false,
+            topic_text: None,
+        }
+    }
+
     pub fn id(&self) -> &ChannelID {
         &self.id
     }
@@ -73,6 +85,7 @@ impl Channel {
         self.is_starred || self.name == "team-core" || self.name == "development"
     }
 
+    #[cfg(test)]
     pub fn has_unreads(&self) -> bool {
         self.has_unreads
     }
@@ -83,6 +96,11 @@ impl ChannelList {
         ChannelList {
             channels: BTreeMap::new(),
         }
+    }
+
+    #[cfg(test)]
+    pub fn add_channel(&mut self, channel: Channel) {
+        self.channels.insert(channel.id().clone(), channel);
     }
 
     pub fn iter(&self) -> Iter {

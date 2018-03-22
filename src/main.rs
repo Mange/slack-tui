@@ -227,6 +227,19 @@ impl App {
         }
     }
 
+    fn select_channel_from_selector(&mut self) {
+        let id = self.channel_selector.select(&self.channels);
+        let message = format!(
+            "Switching to channel {}",
+            self.channels
+                .get(&id)
+                .map(Channel::name)
+                .unwrap_or("(unknown channel)")
+        );
+        self.add_fake_message(Some(&message));
+        self.selected_channel_id = Some(id);
+    }
+
     fn add_loading_message(&mut self) {
         let time = Local::now();
 
@@ -236,12 +249,17 @@ impl App {
         self.chat_canvas.replace(None);
     }
 
-    fn create_fake_message(&mut self) {
+    fn add_fake_message(&mut self, msg: Option<&str>) {
         let time = Local::now();
+
+        let message = match msg {
+            Some(msg) => String::from(msg),
+            None => format!("This is a fake message generated at: {}", time),
+        };
 
         self.messages.add(messages::StandardMessage {
             from: "Fake Message".into(),
-            body: format!("This is a fake message generated at: {}", time),
+            body: message,
             timestamp: time.timestamp_subsec_millis().to_string(),
         });
         self.chat_canvas.replace(None);

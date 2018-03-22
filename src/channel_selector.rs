@@ -1,7 +1,17 @@
+use std::cmp::{Ord, Ordering, PartialOrd};
+use chat::{Channel, ChannelID, ChannelList};
+
 #[derive(Debug)]
 pub struct ChannelSelector {
     text: String,
     cursor_pos: usize,
+    selected_index: usize,
+}
+
+#[derive(Debug)]
+pub struct ChannelMatch<'a> {
+    pub score: f32,
+    pub channel: &'a Channel,
 }
 
 impl ChannelSelector {
@@ -9,6 +19,7 @@ impl ChannelSelector {
         ChannelSelector {
             text: String::new(),
             cursor_pos: 0,
+            selected_index: 0,
         }
     }
 
@@ -20,9 +31,14 @@ impl ChannelSelector {
         self.cursor_pos
     }
 
+    pub fn selected_index(&self, max: usize) -> usize {
+        self.selected_index.min(max)
+    }
+
     pub fn reset(&mut self) {
         self.text.clear();
         self.cursor_pos = 0;
+        self.selected_index = 0;
     }
 
     pub fn add_character(&mut self, chr: char) {
@@ -65,6 +81,81 @@ impl ChannelSelector {
 
     pub fn move_to_beginning(&mut self) {
         self.cursor_pos = 0;
+    }
+
+    pub fn select_next_match(&mut self) {
+        self.selected_index = self.selected_index.saturating_add(1);
+    }
+
+    pub fn select_previous_match(&mut self) {
+        self.selected_index = self.selected_index.saturating_sub(1);
+    }
+
+    pub fn top_matches<'channels>(
+        &self,
+        channels: &'channels ChannelList,
+        max: usize,
+    ) -> Vec<ChannelMatch<'channels>> {
+        let mut matches: Vec<_> = channels
+            .iter()
+            .map(|(_, channel)| ChannelMatch {
+                score: calculate_score(&channel, &self.text),
+                channel,
+            })
+            .filter(|m| m.score > 0.0)
+            .collect();
+        matches.sort();
+        matches
+    }
+
+    pub fn select(&self, channels: &ChannelList) -> ChannelID {
+        let top_matches = self.top_matches(channels, self.selected_index);
+        let index = self.selected_index.min(top_matches.len() - 1);
+        top_matches[index].channel.id().clone()
+    }
+}
+
+fn calculate_score(channel: &Channel, text: &str) -> f32 {
+    // Find first character from text in channel name, then search for second text character to the
+    // right, and so on. If a character is not found, return a negative score.
+    let mut name = channel.name();
+    let mut cursor = 0;
+    for chr in text.chars() {
+        match name.find(chr) {
+            Some(pos) => {
+                cursor = pos;
+                name = &name[pos..];
+            }
+            None => return -1.0,
+        }
+    }
+    1.0
+}
+
+impl<'a> PartialEq for ChannelMatch<'a> {
+    fn eq(&self, rhs: &ChannelMatch) -> bool {
+        self.score == rhs.score
+    }
+}
+
+impl<'a> Eq for ChannelMatch<'a> {}
+
+impl<'a> PartialOrd for ChannelMatch<'a> {
+    fn partial_cmp(&self, rhs: &ChannelMatch) -> Option<Ordering> {
+        let score_order = self.score.partial_cmp(&rhs.score);
+        if let Some(Ordering::Equal) = score_order {
+            self.channel.name().partial_cmp(rhs.channel.name())
+        } else {
+            score_order
+        }
+    }
+}
+
+impl<'a> Ord for ChannelMatch<'a> {
+    fn cmp(&self, rhs: &ChannelMatch) -> Ordering {
+        self.score
+            .partial_cmp(&rhs.score)
+            .unwrap_or(Ordering::Equal)
     }
 }
 
@@ -163,5 +254,26 @@ mod tests {
         channel_selector.delete_word();
 
         assert_eq!(channel_selector.text(), "a");
+    }
+
+    #[test]
+    fn it_matches_channels_containing_text() {
+        let mut channel_list = ChannelList::new();
+        channel_list.add_channel(Channel::fixture("1", "foobar"));
+        channel_list.add_channel(Channel::fixture("2", "bar-jumping"));
+        channel_list.add_channel(Channel::fixture("3", "foosball"));
+        channel_list.add_channel(Channel::fixture("4", "unrelated"));
+
+        let mut channel_selector = ChannelSelector::new();
+        channel_selector.add_character('f');
+        channel_selector.add_character('o');
+        channel_selector.add_character('o');
+
+        let top_channels: Vec<&str> = channel_selector
+            .top_matches(&channel_list, 3)
+            .iter()
+            .map(|m| m.channel.name())
+            .collect();
+        assert_eq!(&top_channels, &["foobar", "foosball"]);
     }
 }
