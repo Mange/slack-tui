@@ -7,15 +7,17 @@ pub struct Buffer {
     messages: BTreeSet<Message>,
 }
 
-impl Into<Buffer> for Vec<Message> {
-    fn into(self) -> Buffer {
+impl Buffer {
+    pub fn new() -> Self {
         Buffer {
-            messages: self.into_iter().collect(),
+            messages: BTreeSet::new(),
         }
     }
-}
 
-impl Buffer {
+    pub fn add(&mut self, message: Message) {
+        self.messages.insert(message);
+    }
+
     pub fn render_as_canvas(&self, width: u16) -> Canvas {
         use tui::style::Style;
 

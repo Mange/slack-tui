@@ -1,4 +1,4 @@
-extern crate serde_yaml;
+extern crate chrono;
 extern crate termion;
 extern crate tui;
 
@@ -11,13 +11,12 @@ mod layout;
 mod messages;
 
 use std::io;
-use std::io::BufReader;
 use std::sync::mpsc;
 use std::thread;
 use std::time;
-use std::fs::File;
 use std::cell::{Cell, Ref, RefCell};
 
+use chrono::prelude::*;
 use tui::Terminal;
 use tui::backend::MouseBackend;
 use tui::layout::Rect;
@@ -25,7 +24,6 @@ use tui::layout::Rect;
 use termion::event;
 use termion::input::TermRead;
 
-use messages::Message;
 use canvas::Canvas;
 
 pub type TerminalBackend = Terminal<MouseBackend>;
@@ -65,33 +63,14 @@ impl App {
     }
 }
 
-fn load_fixtures() -> Vec<Message> {
-    let file = File::open("fixtures.yml").unwrap();
-    let reader = BufReader::new(file);
-    serde_yaml::from_reader(reader).unwrap()
-}
-
 fn main() {
     let backend = MouseBackend::new().unwrap();
     let terminal = Terminal::new(backend).unwrap();
 
-    let mut messages = load_fixtures();
-
-    for n in 0..10 {
-        messages.insert(
-            n,
-            Message {
-                timestamp: (1110001.0 + n as f32).to_string(),
-                from: "Example".into(),
-                body: "Yet another example that you can use to test scrolling and other nice things like that. Also this line should wrap in most window sizes that you are realisticly using when developing this UI prototype. At least on common font sizes.\nRight?".into(),
-            }
-        );
-    }
-
     let size = terminal.size().unwrap();
     let mut app = App {
         history_scroll: 0,
-        messages: messages.into(),
+        messages: messages::Buffer::new(),
         chat_canvas: RefCell::new(None),
         last_chat_height: Cell::new(0),
         size,
@@ -139,6 +118,7 @@ impl App {
                     event::Key::Char('q') => break,
                     event::Key::Char('j') => self.scroll_down(),
                     event::Key::Char('k') => self.scroll_up(),
+                    event::Key::Char('b') => self.create_fake_message(),
                     _ => {}
                 },
                 Event::Tick => {}
@@ -173,6 +153,19 @@ impl App {
             let max_scroll = chat_canvas_height - chat_viewport_height;
             self.history_scroll = (self.current_history_scroll() + 1).min(max_scroll as usize);
         }
+    }
+
+    fn create_fake_message(&mut self) {
+        let time = Local::now();
+
+        let message = messages::Message {
+            from: "Fake Message".into(),
+            body: format!("This is a fake message generated at: {}", time),
+            timestamp: time.timestamp_subsec_millis().to_string(),
+        };
+
+        self.messages.add(message);
+        self.chat_canvas.replace(None);
     }
 
     fn draw(&mut self, terminal: &mut TerminalBackend) -> Result<(), io::Error> {
