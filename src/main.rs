@@ -8,9 +8,6 @@ extern crate tui;
 #[macro_use]
 extern crate failure;
 
-#[macro_use]
-extern crate serde_derive;
-
 mod canvas;
 mod channel_selector;
 mod chat;
@@ -309,7 +306,7 @@ impl App {
         let time = Local::now();
 
         self.messages.add(messages::LoadingMessage {
-            from_timestamp: time.timestamp_subsec_millis().to_string(),
+            event_id: time.into(),
         });
         self.chat_canvas.replace(None);
     }
@@ -325,7 +322,8 @@ impl App {
         self.messages.add(messages::StandardMessage {
             from: "Fake Message".into(),
             body: message,
-            timestamp: time.timestamp_subsec_millis().to_string(),
+            message_id: time.into(),
+            thread_id: time.into(),
         });
         self.chat_canvas.replace(None);
     }

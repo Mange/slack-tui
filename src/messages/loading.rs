@@ -1,22 +1,23 @@
 use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
 
+use super::MessageID;
 use canvas::Canvas;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct LoadingMessage {
-    pub from_timestamp: String,
+    pub event_id: MessageID,
 }
 
 impl Hash for LoadingMessage {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.from_timestamp.hash(state)
+        self.event_id.hash(state)
     }
 }
 
 impl PartialEq for LoadingMessage {
     fn eq(&self, rhs: &LoadingMessage) -> bool {
-        self.from_timestamp.eq(&rhs.from_timestamp)
+        self.event_id.eq(&rhs.event_id)
     }
 }
 
@@ -24,17 +25,21 @@ impl Eq for LoadingMessage {}
 
 impl PartialOrd for LoadingMessage {
     fn partial_cmp(&self, rhs: &LoadingMessage) -> Option<Ordering> {
-        self.from_timestamp.partial_cmp(&rhs.from_timestamp)
+        self.event_id.partial_cmp(&rhs.event_id)
     }
 }
 
 impl Ord for LoadingMessage {
     fn cmp(&self, rhs: &LoadingMessage) -> Ordering {
-        self.from_timestamp.cmp(&rhs.from_timestamp)
+        self.event_id.cmp(&rhs.event_id)
     }
 }
 
 impl LoadingMessage {
+    pub fn id(&self) -> &MessageID {
+        &self.event_id
+    }
+
     pub fn render_as_canvas(&self, width: u16) -> Canvas {
         use tui::style::*;
 
@@ -55,7 +60,7 @@ mod tests {
     #[test]
     fn it_renders_as_canvas() {
         let message = LoadingMessage {
-            from_timestamp: "1110000.0000".into(),
+            event_id: "1110000.0000".into(),
         };
 
         let big_canvas = message.render_as_canvas(50);

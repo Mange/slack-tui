@@ -1,24 +1,26 @@
 use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
 
+use super::MessageID;
 use canvas::Canvas;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct StandardMessage {
-    pub timestamp: String,
+    pub message_id: MessageID,
+    pub thread_id: MessageID,
     pub from: String,
     pub body: String,
 }
 
 impl Hash for StandardMessage {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.timestamp.hash(state)
+        self.message_id.hash(state)
     }
 }
 
 impl PartialEq for StandardMessage {
     fn eq(&self, rhs: &StandardMessage) -> bool {
-        self.timestamp.eq(&rhs.timestamp)
+        self.message_id.eq(&rhs.message_id)
     }
 }
 
@@ -26,17 +28,21 @@ impl Eq for StandardMessage {}
 
 impl PartialOrd for StandardMessage {
     fn partial_cmp(&self, rhs: &StandardMessage) -> Option<Ordering> {
-        self.timestamp.partial_cmp(&rhs.timestamp)
+        self.message_id.partial_cmp(&rhs.message_id)
     }
 }
 
 impl Ord for StandardMessage {
     fn cmp(&self, rhs: &StandardMessage) -> Ordering {
-        self.timestamp.cmp(&rhs.timestamp)
+        self.message_id.cmp(&rhs.message_id)
     }
 }
 
 impl StandardMessage {
+    pub fn id(&self) -> &MessageID {
+        &self.message_id
+    }
+
     pub fn render_as_canvas(&self, width: u16) -> Canvas {
         use tui::style::*;
 
@@ -61,7 +67,8 @@ mod tests {
         let message = StandardMessage {
             from: "Bear Grylls".into(),
             body: "I'm lost. I guess I have to drink my own urine. :)".into(),
-            timestamp: "1110000.0000".into(),
+            message_id: "1110000.0000".into(),
+            thread_id: "1110000.0000".into(),
         };
 
         let big_canvas = message.render_as_canvas(50);
