@@ -57,7 +57,6 @@ fn render_main(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
 }
 
 fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    let team_name = "My Team";
     match app.selected_channel() {
         Some(channel) => {
             let topic = match channel.topic_text() {
@@ -67,7 +66,7 @@ fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
             Paragraph::default()
                 .text(&format!(
                     "{{mod=bold {team}}} > {{mod=bold #{channel}}} [{topic}]",
-                    team = team_name,
+                    team = app.team_name,
                     channel = channel.name(),
                     topic = topic
                 ))
@@ -76,7 +75,7 @@ fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
         }
         None => {
             Paragraph::default()
-                .text(&format!("{} > (No channel selected)", team_name))
+                .text(&format!("{} > (No channel selected)", app.team_name))
                 .style(Style::default().bg(Color::Gray).fg(Color::White))
                 .render(terminal, rect);
         }

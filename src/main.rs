@@ -65,6 +65,7 @@ pub struct App {
     messages: messages::Buffer,
     selected_channel_id: Option<ChannelID>,
     size: Rect,
+    team_name: String,
 
     // For Mode::SelectChannel
     channel_selector: ChannelSelector,
@@ -129,12 +130,12 @@ fn run(terminal: &mut TerminalBackend) -> Result<(), Error> {
     let rtm = slack::RtmClient::login(&slack_api_token).context("Could not log in to Slack")?;
 
     let size = terminal.size()?;
-    let mut app = App::new(size, &rtm);
+    let mut app = App::new(size, &rtm)?;
     app.run(terminal, rtm)
 }
 
 impl App {
-    fn new(size: Rect, rtm: &slack::RtmClient) -> App {
+    fn new(size: Rect, rtm: &slack::RtmClient) -> Result<App, Error> {
         let response = rtm.start_response();
         let channels: ChannelList = response
             .channels
@@ -149,7 +150,14 @@ impl App {
             .find(|&(_id, channel)| channel.is_member())
             .map(|(id, _channel)| id.clone());
 
-        App {
+        let team_name = response
+            .team
+            .as_ref()
+            .and_then(|team| team.name.as_ref())
+            .cloned()
+            .ok_or_else(|| format_err!("Slack did not provide a Team Name on login"))?;
+
+        Ok(App {
             channel_selector: ChannelSelector::new(),
             channels,
             chat_canvas: RefCell::new(None),
@@ -159,7 +167,8 @@ impl App {
             messages: messages::Buffer::new(),
             selected_channel_id,
             size,
-        }
+            team_name,
+        })
     }
 
     fn run(&mut self, terminal: &mut TerminalBackend, rtm: slack::RtmClient) -> Result<(), Error> {
