@@ -26,8 +26,6 @@ use tui::Terminal;
 use tui::backend::MouseBackend;
 use tui::layout::Rect;
 
-use slack::api as slack_api;
-
 use termion::event;
 use termion::input::TermRead;
 
@@ -70,43 +68,64 @@ struct SlackEventHandler {
 }
 
 impl slack::EventHandler for SlackEventHandler {
-    fn on_connect(&mut self, rtm: &slack::RtmClient) {
-        self.tx.send(Event::Connected);
+    fn on_connect(&mut self, _rtm: &slack::RtmClient) {
+        let _ = self.tx.send(Event::Connected);
     }
-    fn on_close(&mut self, rtm: &slack::RtmClient) {
-        self.tx.send(Event::Disconnected);
+    fn on_close(&mut self, _rtm: &slack::RtmClient) {
+        let _ = self.tx.send(Event::Disconnected);
     }
-    fn on_event(&mut self, rtm: &slack::RtmClient, slack_event: slack::Event) {}
+    fn on_event(&mut self, _rtm: &slack::RtmClient, _slack_event: slack::Event) {}
 }
 
 fn main() {
     dotenv::dotenv().ok();
 
+    let rtm = match slack::RtmClient::login(&::std::env::var("SLACK_API_TOKEN").unwrap()) {
+        Ok(client) => client,
+        Err(error) => panic!("Failed to login to Slack: {}", error),
+    };
+
     let terminal = Terminal::new(MouseBackend::new().unwrap()).unwrap();
 
     let size = terminal.size().unwrap();
-    let mut app = App {
-        channel_selector: ChannelSelector::new(),
-        channels: ChannelList::new(),
-        chat_canvas: RefCell::new(None),
-        current_mode: Mode::History,
-        history_scroll: 0,
-        last_chat_height: Cell::new(0),
-        messages: messages::Buffer::new(),
-        selected_channel_id: None,
-        size,
-    };
-    app.run(terminal).unwrap();
+    let mut app = App::new(size, &rtm);
+    app.run(terminal, rtm).unwrap();
 }
 
 impl App {
-    fn run(&mut self, mut terminal: TerminalBackend) -> Result<(), io::Error> {
-        let rtm = match slack::RtmClient::login(&::std::env::var("SLACK_API_TOKEN").unwrap()) {
-            Ok(client) => client,
-            Err(error) => panic!("Failed to login to Slack: {}", error),
-        };
-        self.prepopulate(rtm.start_response().clone());
+    fn new(size: Rect, rtm: &slack::RtmClient) -> App {
+        let response = rtm.start_response();
+        let channels: ChannelList = response
+            .channels
+            .clone()
+            .expect("Slack did not provide a channel list on login")
+            .iter()
+            .flat_map(Channel::from_slack)
+            .collect();
+        // TODO: Pick a channel using a more intelligent way...
+        let selected_channel_id = channels
+            .iter()
+            .find(|&(_id, channel)| channel.is_member())
+            .map(|(id, _channel)| id.clone());
 
+        App {
+            channel_selector: ChannelSelector::new(),
+            channels,
+            chat_canvas: RefCell::new(None),
+            current_mode: Mode::History,
+            history_scroll: 0,
+            last_chat_height: Cell::new(0),
+            messages: messages::Buffer::new(),
+            selected_channel_id,
+            size,
+        }
+    }
+
+    fn run(
+        &mut self,
+        mut terminal: TerminalBackend,
+        rtm: slack::RtmClient,
+    ) -> Result<(), io::Error> {
         terminal.clear()?;
         terminal.hide_cursor()?;
 
@@ -186,16 +205,6 @@ impl App {
         self.last_chat_height.replace(height);
 
         Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
-    }
-
-    fn prepopulate(&mut self, response: slack_api::rtm::StartResponse) {
-        if let Some(channels) = response.channels {
-            self.channels = channels.iter().flat_map(Channel::from_slack).collect();
-            self.selected_channel_id = channels
-                .iter()
-                .find(|c| c.is_member.unwrap_or(false))
-                .and_then(|c| c.id.clone().map(ChannelID::from));
-        }
     }
 
     fn enter_mode(&mut self, new_mode: Mode) {
