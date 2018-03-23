@@ -5,6 +5,8 @@ mod standard;
 use std::cmp::{Ord, Ordering, PartialOrd};
 
 use chrono::{DateTime, TimeZone};
+use slack::api;
+use failure::Error;
 
 use canvas::Canvas;
 
@@ -24,6 +26,13 @@ pub enum Message {
 }
 
 impl Message {
+    pub fn from_slack_message(msg: &api::Message) -> Result<Option<Self>, Error> {
+        match *msg {
+            api::Message::Standard(ref msg) => Ok(Some(StandardMessage::from(msg).into())),
+            _ => Ok(None),
+        }
+    }
+
     pub fn id(&self) -> &MessageID {
         use self::Message::*;
         match *self {

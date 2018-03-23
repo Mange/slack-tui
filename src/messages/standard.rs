@@ -1,6 +1,8 @@
 use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
 
+use slack::api;
+
 use super::MessageID;
 use canvas::Canvas;
 
@@ -10,6 +12,23 @@ pub struct StandardMessage {
     pub thread_id: MessageID,
     pub from: String,
     pub body: String,
+}
+
+impl<'a> From<&'a api::MessageStandard> for StandardMessage {
+    fn from(msg: &'a api::MessageStandard) -> Self {
+        let message_id = MessageID::from(msg.ts.clone().unwrap());
+        let thread_id = msg.ts
+            .clone()
+            .map(MessageID::from)
+            .unwrap_or_else(|| message_id.clone());
+
+        StandardMessage {
+            message_id,
+            thread_id,
+            body: msg.text.clone().unwrap(),
+            from: msg.user.clone().unwrap(),
+        }
+    }
 }
 
 impl Hash for StandardMessage {

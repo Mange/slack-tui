@@ -36,15 +36,18 @@ use canvas::Canvas;
 use chat::{Channel, ChannelID, ChannelList};
 use input_manager::KeyManager;
 use channel_selector::ChannelSelector;
+use messages::Message;
 
 pub type TerminalBackend = Terminal<MouseBackend>;
 
+#[derive(Debug)]
 enum Event {
     Error(Box<Error>),
     Tick,
     Input(event::Key),
     Connected,
     Disconnected,
+    Message(Box<Message>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -76,10 +79,38 @@ impl slack::EventHandler for SlackEventHandler {
     fn on_connect(&mut self, _rtm: &slack::RtmClient) {
         let _ = self.tx.send(Event::Connected);
     }
+
     fn on_close(&mut self, _rtm: &slack::RtmClient) {
         let _ = self.tx.send(Event::Disconnected);
     }
-    fn on_event(&mut self, _rtm: &slack::RtmClient, _slack_event: slack::Event) {}
+
+    fn on_event(&mut self, _rtm: &slack::RtmClient, slack_event: slack::Event) {
+        match self.handle_event(slack_event) {
+            Ok(_) => {}
+            Err(error) => {
+                self.tx.send(Event::Error(Box::new(error))).ok();
+            }
+        }
+    }
+}
+
+impl SlackEventHandler {
+    fn handle_event(&mut self, slack_event: slack::Event) -> Result<(), Error> {
+        match slack_event {
+            slack::Event::Message(msg) => self.new_message(*msg)?,
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn new_message(&mut self, msg: slack::Message) -> Result<(), Error> {
+        match Message::from_slack_message(&msg)? {
+            Some(message) => self.tx.send(Event::Message(Box::new(message)))?,
+            None => {}
+        }
+        Ok(())
+    }
 }
 
 fn main() {
@@ -224,6 +255,7 @@ impl App {
                     // TODO: Show disonnected status, try to reconnect, etc.
                     break;
                 }
+                Event::Message(message) => self.add_message(*message),
                 Event::Tick => {}
             }
         }
@@ -300,6 +332,11 @@ impl App {
         );
         self.add_fake_message(Some(&message));
         self.selected_channel_id = Some(id);
+    }
+
+    fn add_message(&mut self, message: Message) {
+        self.messages.add(message);
+        self.chat_canvas.replace(None);
     }
 
     fn add_loading_message(&mut self) {
