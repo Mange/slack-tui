@@ -1,0 +1,56 @@
+Tasks to do:
+
+  - Only show messages that are in the current channel.
+  - Load history when switching channel.
+  - Adding the same message to the message buffer again should merge with the old record.
+  - Load users, render user names with messages instead.
+  - Parse message text markup.
+  - Add input for writing replies.
+    - (very simple Insert and Normal modes)
+    - Actually send the text.
+    - Transform text before sending; @references, URLs, etc. (Remember to escape things already in the message)
+    - Typing indicators when inside Insert/Normal mode.
+  - Render thread message count on messages.
+
+Much later:
+  - Opening threads.
+  - Opening DMs/groups.
+  - Creating DMs/groups.
+
+
+--------
+
+Keybindings?
+
+Just some basic ideas.
+
+History mode
+  x j/k - scroll down / up
+  - C-f - page down
+  - C-b - page up
+  - gg  - Go to top
+  - C-g - Go to bottom
+  - i   - Insert mode
+  - gn  - Normal mode (requires chord; temporarily use "c"?)
+  x q   - Quit (Temporary! Need to add an Command mode)
+
+Normal mode:
+  - j/k - scroll down / up in reply input
+  - h/l - scroll left / right in reply input
+  - w   - Forward word
+  - b   - Backward word
+  - C-f - page down in reply input
+  - C-b - page up in reply input
+  - gg  - Go to top in reply input
+  - C-g - Go to bottom in reply input
+  - i   - Insert mode
+  - o   - New line + Insert mode
+  - O   - New line above + Insert mode
+  - ....
+  - gh  - History mode
+
+Insert mode:
+  - Esc - Normal mode
+  - C-d - Send reply + History mode
+  - Tab - Autocomplete @ mention or # channel
+  - C-enter - Send reply + Insert mode
