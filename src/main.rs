@@ -61,6 +61,7 @@ pub struct App {
     chat_canvas: RefCell<Option<Canvas>>,
     current_mode: Mode,
     history_scroll: usize,
+    is_loading_more_messages: bool,
     last_chat_height: Cell<u16>,
     messages: messages::Buffer,
     selected_channel_id: Option<ChannelID>,
@@ -191,6 +192,7 @@ impl App {
             chat_canvas: RefCell::new(None),
             current_mode: Mode::History,
             history_scroll: 0,
+            is_loading_more_messages: false,
             last_chat_height: Cell::new(0),
             messages: messages::Buffer::new(),
             selected_channel_id,
@@ -250,7 +252,7 @@ impl App {
                     input_manager::Outcome::Continue => {}
                     input_manager::Outcome::Quit => break,
                 },
-                Event::Connected => self.add_loading_message(),
+                Event::Connected => {}
                 Event::Disconnected => {
                     // TODO: Show disonnected status, try to reconnect, etc.
                     break;
@@ -281,7 +283,8 @@ impl App {
         {
             let mut cache = self.chat_canvas.borrow_mut();
             if cache.is_none() {
-                let canvas = self.messages.render_as_canvas(width);
+                let canvas = self.messages
+                    .render_as_canvas(width, self.is_loading_more_messages);
                 *cache = Some(canvas);
             }
         }
@@ -334,17 +337,13 @@ impl App {
         self.selected_channel_id = Some(id);
     }
 
-    fn add_message(&mut self, message: Message) {
-        self.messages.add(message);
+    fn toggle_loading_state(&mut self) {
+        self.is_loading_more_messages = !self.is_loading_more_messages;
         self.chat_canvas.replace(None);
     }
 
-    fn add_loading_message(&mut self) {
-        let time = Local::now();
-
-        self.messages.add(messages::LoadingMessage {
-            event_id: time.into(),
-        });
+    fn add_message(&mut self, message: Message) {
+        self.messages.add(message);
         self.chat_canvas.replace(None);
     }
 

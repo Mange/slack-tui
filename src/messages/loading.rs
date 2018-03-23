@@ -1,43 +1,11 @@
-use std::hash::{Hash, Hasher};
-use std::cmp::{Ord, Ordering, PartialOrd};
-
-use super::MessageID;
 use canvas::Canvas;
 
 #[derive(Clone, Debug)]
-pub struct LoadingMessage {
-    pub event_id: MessageID,
-}
-
-impl Hash for LoadingMessage {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.event_id.hash(state)
-    }
-}
-
-impl PartialEq for LoadingMessage {
-    fn eq(&self, rhs: &LoadingMessage) -> bool {
-        self.event_id.eq(&rhs.event_id)
-    }
-}
-
-impl Eq for LoadingMessage {}
-
-impl PartialOrd for LoadingMessage {
-    fn partial_cmp(&self, rhs: &LoadingMessage) -> Option<Ordering> {
-        self.event_id.partial_cmp(&rhs.event_id)
-    }
-}
-
-impl Ord for LoadingMessage {
-    fn cmp(&self, rhs: &LoadingMessage) -> Ordering {
-        self.event_id.cmp(&rhs.event_id)
-    }
-}
+pub struct LoadingMessage {}
 
 impl LoadingMessage {
-    pub fn id(&self) -> &MessageID {
-        &self.event_id
+    pub fn new() -> Self {
+        LoadingMessage {}
     }
 
     pub fn render_as_canvas(&self, width: u16) -> Canvas {
@@ -59,9 +27,7 @@ mod tests {
 
     #[test]
     fn it_renders_as_canvas() {
-        let message = LoadingMessage {
-            event_id: "1110000.0000".into(),
-        };
+        let message = LoadingMessage::new();
 
         let big_canvas = message.render_as_canvas(50);
         assert_eq!(

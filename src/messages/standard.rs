@@ -68,9 +68,7 @@ impl StandardMessage {
         let underlined = Style::default().modifier(Modifier::Underline);
         let mut canvas = Canvas::new(width);
         canvas.add_string_truncated(&self.from, underlined);
-        if self.from.len() < width as usize {
-            canvas.add_string_truncated("\n", Style::default());
-        }
+        canvas.add_string_truncated("\n", Style::default());
         canvas.add_string_wrapped(&format!("{}\n", self.body), Style::default());
 
         canvas

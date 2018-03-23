@@ -29,7 +29,7 @@ impl KeyManager {
             Char('j') => app.scroll_down(),
             Char('k') => app.scroll_up(),
             Char('b') => app.add_fake_message(None),
-            Char('B') => app.add_loading_message(),
+            Char('B') => app.toggle_loading_state(),
             Ctrl('k') => app.enter_mode(Mode::SelectChannel),
             _ => {}
         }
