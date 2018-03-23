@@ -4,6 +4,10 @@ extern crate slack;
 extern crate termion;
 extern crate tui;
 
+#[allow(unused_imports)]
+#[macro_use]
+extern crate failure;
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -29,6 +33,8 @@ use tui::layout::Rect;
 use termion::event;
 use termion::input::TermRead;
 
+use failure::{Error, Fail, ResultExt};
+
 use canvas::Canvas;
 use chat::{Channel, ChannelID, ChannelList};
 use input_manager::KeyManager;
@@ -37,6 +43,7 @@ use channel_selector::ChannelSelector;
 pub type TerminalBackend = Terminal<MouseBackend>;
 
 enum Event {
+    Error(Box<Error>),
     Tick,
     Input(event::Key),
     Connected,
@@ -79,17 +86,51 @@ impl slack::EventHandler for SlackEventHandler {
 
 fn main() {
     dotenv::dotenv().ok();
-
-    let rtm = match slack::RtmClient::login(&::std::env::var("SLACK_API_TOKEN").unwrap()) {
-        Ok(client) => client,
-        Err(error) => panic!("Failed to login to Slack: {}", error),
+    let mut terminal = match MouseBackend::new().and_then(|backend| Terminal::new(backend)) {
+        Ok(val) => val,
+        Err(error) => print_error_and_exit(error.into()),
     };
 
-    let terminal = Terminal::new(MouseBackend::new().unwrap()).unwrap();
+    match run(&mut terminal) {
+        Ok(_) => {}
+        Err(error) => {
+            let _ = terminal.show_cursor();
+            let _ = terminal.clear();
+            drop(terminal);
+            print_error_and_exit(error);
+        }
+    }
+}
 
-    let size = terminal.size().unwrap();
+fn print_error_and_exit(error: Error) -> ! {
+    for (i, cause) in error.causes().enumerate() {
+        if i == 0 {
+            eprintln!("Error: {}", cause);
+        } else {
+            let indentation = 4 * i;
+            eprintln!("{0:1$}Caused by: {2}", "", indentation, cause);
+        }
+
+        #[cfg(debug_assertions)]
+        {
+            if let Some(backtrace) = cause.backtrace() {
+                println!("{:#?}", backtrace);
+            }
+        }
+    }
+    eprintln!("\n...Sorry :(");
+
+    ::std::process::exit(1);
+}
+
+fn run(terminal: &mut TerminalBackend) -> Result<(), Error> {
+    let slack_api_token = ::std::env::var("SLACK_API_TOKEN")
+        .context("Could not read SLACK_API_TOKEN environment variable")?;
+    let rtm = slack::RtmClient::login(&slack_api_token).context("Could not log in to Slack")?;
+
+    let size = terminal.size()?;
     let mut app = App::new(size, &rtm);
-    app.run(terminal, rtm).unwrap();
+    app.run(terminal, rtm)
 }
 
 impl App {
@@ -121,11 +162,7 @@ impl App {
         }
     }
 
-    fn run(
-        &mut self,
-        mut terminal: TerminalBackend,
-        rtm: slack::RtmClient,
-    ) -> Result<(), io::Error> {
+    fn run(&mut self, terminal: &mut TerminalBackend, rtm: slack::RtmClient) -> Result<(), Error> {
         terminal.clear()?;
         terminal.hide_cursor()?;
 
@@ -135,14 +172,22 @@ impl App {
         thread::spawn(move || {
             let stdin = io::stdin();
             for c in stdin.keys() {
-                let evt = c.unwrap();
-                input_tx.send(Event::Input(evt)).unwrap();
+                match c {
+                    Ok(evt) => {
+                        input_tx.send(Event::Input(evt)).ok();
+                    }
+                    Err(error) => {
+                        let failure = error.context("Cannot parse STDIN bytes as an event");
+                        input_tx.send(Event::Error(Box::new(failure.into()))).ok();
+                        break;
+                    }
+                }
             }
         });
 
         let timer_tx = tx.clone();
         thread::spawn(move || loop {
-            timer_tx.send(Event::Tick).unwrap();
+            timer_tx.send(Event::Tick).ok();
             thread::sleep(time::Duration::from_millis(200));
         });
 
@@ -160,9 +205,10 @@ impl App {
                 self.size = size;
                 self.chat_canvas.replace(None);
             }
-            self.draw(&mut terminal)?;
-            let evt = rx.recv().unwrap();
+            self.draw(terminal)?;
+            let evt = rx.recv()?;
             match evt {
+                Event::Error(error) => return Err(*error),
                 Event::Input(input) => match key_manager.handle_key(self, input) {
                     input_manager::Outcome::Continue => {}
                     input_manager::Outcome::Quit => break,
@@ -204,6 +250,8 @@ impl App {
 
         self.last_chat_height.replace(height);
 
+        // By now we know that chat_canvas is_some(), so unwrap should be safe. Option::as_ref
+        // returns a new option of a reference to inner value, so it's fine to consume that Option.
         Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
     }
 
@@ -219,11 +267,10 @@ impl App {
     fn scroll_up(&mut self) {
         // NOTE: Scroll value is distance from bottom
         let chat_canvas_height = {
-            let last_canvas = self.chat_canvas.borrow();
-            if last_canvas.is_none() {
-                return;
+            match *self.chat_canvas.borrow() {
+                Some(ref canvas) => canvas.height(),
+                None => return,
             }
-            last_canvas.as_ref().unwrap().height()
         };
         let chat_viewport_height = self.last_chat_height.get();
 
