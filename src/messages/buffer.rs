@@ -14,8 +14,8 @@ impl Buffer {
         }
     }
 
-    pub fn add<M: Into<Message>>(&mut self, message: M) {
-        let message = message.into();
+    pub fn add<E: HistoryEntry>(&mut self, entry: E) {
+        let message = entry.into_message();
         self.messages.insert(message.id().clone(), message);
     }
 

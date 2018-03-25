@@ -3,7 +3,7 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 
 use failure::Error;
 
-use super::MessageID;
+use super::{HistoryEntry, Message, MessageID};
 use canvas::Canvas;
 
 #[derive(Clone, Debug)]
@@ -56,12 +56,14 @@ impl UnsupportedMessage {
             subtype: subtype.clone(),
         })
     }
+}
 
-    pub fn id(&self) -> &MessageID {
+impl HistoryEntry for UnsupportedMessage {
+    fn id(&self) -> &MessageID {
         &self.id
     }
 
-    pub fn render_as_canvas(&self, width: u16) -> Canvas {
+    fn render_as_canvas(&self, width: u16) -> Canvas {
         use tui::style::*;
 
         let faint = Style::default().modifier(Modifier::Faint);
@@ -78,6 +80,10 @@ impl UnsupportedMessage {
         );
 
         canvas
+    }
+
+    fn into_message(self) -> Message {
+        Message::Unsupported(self)
     }
 }
 

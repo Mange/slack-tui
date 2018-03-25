@@ -25,6 +25,12 @@ pub enum Message {
     Unsupported(UnsupportedMessage),
 }
 
+pub trait HistoryEntry {
+    fn id(&self) -> &MessageID;
+    fn render_as_canvas(&self, width: u16) -> Canvas;
+    fn into_message(self) -> Message;
+}
+
 fn unsupported(
     id: &Option<String>,
     from: &Option<String>,
@@ -32,7 +38,7 @@ fn unsupported(
     subtype: &Option<String>,
 ) -> Result<Option<Message>, Error> {
     match UnsupportedMessage::from_slack_message(id, from, text, subtype) {
-        Ok(message) => Ok(Some(message.into())),
+        Ok(message) => Ok(Some(message.into_message())),
         Err(error) => Err(error),
     }
 }
@@ -41,7 +47,7 @@ impl Message {
     pub fn from_slack_message(msg: &api::Message) -> Result<Option<Self>, Error> {
         use self::api::Message as S;
         match *msg {
-            S::Standard(ref msg) => Ok(Some(StandardMessage::from(msg).into())),
+            S::Standard(ref msg) => Ok(Some(StandardMessage::from(msg).into_message())),
             S::BotMessage(ref msg) => unsupported(&msg.ts, &msg.username, &msg.text, &msg.subtype),
             S::ChannelArchive(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
             S::ChannelJoin(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
@@ -96,8 +102,10 @@ impl Message {
             S::UnpinnedItem(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
         }
     }
+}
 
-    pub fn id(&self) -> &MessageID {
+impl HistoryEntry for Message {
+    fn id(&self) -> &MessageID {
         use self::Message::*;
         match *self {
             Standard(ref msg) => msg.id(),
@@ -105,12 +113,16 @@ impl Message {
         }
     }
 
-    pub fn render_as_canvas(&self, width: u16) -> Canvas {
+    fn render_as_canvas(&self, width: u16) -> Canvas {
         use self::Message::*;
         match *self {
             Standard(ref msg) => msg.render_as_canvas(width),
             Unsupported(ref msg) => msg.render_as_canvas(width),
         }
+    }
+
+    fn into_message(self) -> Message {
+        self
     }
 }
 
@@ -123,18 +135,6 @@ impl PartialOrd for Message {
 impl Ord for Message {
     fn cmp(&self, rhs: &Message) -> Ordering {
         self.partial_cmp(rhs).unwrap()
-    }
-}
-
-impl From<UnsupportedMessage> for Message {
-    fn from(message: UnsupportedMessage) -> Message {
-        Message::Unsupported(message)
-    }
-}
-
-impl From<StandardMessage> for Message {
-    fn from(message: StandardMessage) -> Message {
-        Message::Standard(message)
     }
 }
 

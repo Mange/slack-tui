@@ -3,7 +3,7 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 
 use slack::api;
 
-use super::MessageID;
+use super::{HistoryEntry, Message, MessageID};
 use canvas::Canvas;
 
 #[derive(Clone, Debug)]
@@ -57,12 +57,12 @@ impl Ord for StandardMessage {
     }
 }
 
-impl StandardMessage {
-    pub fn id(&self) -> &MessageID {
+impl HistoryEntry for StandardMessage {
+    fn id(&self) -> &MessageID {
         &self.message_id
     }
 
-    pub fn render_as_canvas(&self, width: u16) -> Canvas {
+    fn render_as_canvas(&self, width: u16) -> Canvas {
         use tui::style::*;
 
         let underlined = Style::default().modifier(Modifier::Underline);
@@ -72,6 +72,10 @@ impl StandardMessage {
         canvas.add_string_wrapped(&format!("{}\n", self.body), Style::default());
 
         canvas
+    }
+
+    fn into_message(self) -> Message {
+        Message::Standard(self)
     }
 }
 
