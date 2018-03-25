@@ -66,7 +66,10 @@ pub struct App {
     messages: messages::Buffer,
     selected_channel_id: Option<ChannelID>,
     size: Rect,
+    slack_api_token: String,
     team_name: String,
+
+    loader: messages::loader::Loader,
 
     // For Mode::SelectChannel
     channel_selector: ChannelSelector,
@@ -153,18 +156,46 @@ fn print_error_and_exit(error: Error) -> ! {
     ::std::process::exit(1);
 }
 
+fn format_error_with_causes<E: Fail>(error: E) -> String {
+    error
+        .causes()
+        .enumerate()
+        .map(|(i, cause)| {
+            #[cfg(debug_assertions)]
+            let backtrace = if let Some(backtrace) = cause.backtrace() {
+                format!("\n{:#?}\n", backtrace)
+            } else {
+                String::new()
+            };
+
+            #[cfg(not(debug_assertions))]
+            let backtrace = String::new();
+
+            if i == 0 {
+                format!("Error: {}{}", cause, backtrace)
+            } else {
+                let indentation = 4 * i;
+                format!(
+                    "\n{0:1$}Caused by: {2}{3}",
+                    "", indentation, cause, backtrace
+                )
+            }
+        })
+        .collect()
+}
+
 fn run(terminal: &mut TerminalBackend) -> Result<(), Error> {
     let slack_api_token = ::std::env::var("SLACK_API_TOKEN")
         .context("Could not read SLACK_API_TOKEN environment variable")?;
     let rtm = slack::RtmClient::login(&slack_api_token).context("Could not log in to Slack")?;
 
     let size = terminal.size()?;
-    let mut app = App::new(size, &rtm)?;
+    let mut app = App::new(&slack_api_token, size, &rtm)?;
     app.run(terminal, rtm)
 }
 
 impl App {
-    fn new(size: Rect, rtm: &slack::RtmClient) -> Result<App, Error> {
+    fn new(slack_api_token: &str, size: Rect, rtm: &slack::RtmClient) -> Result<App, Error> {
         let response = rtm.start_response();
         let channels: ChannelList = response
             .channels
@@ -197,7 +228,9 @@ impl App {
             messages: messages::Buffer::new(),
             selected_channel_id,
             size,
+            slack_api_token: slack_api_token.to_owned(),
             team_name,
+            loader: messages::loader::Loader::create(slack_api_token)?,
         })
     }
 
@@ -237,6 +270,10 @@ impl App {
 
         let mut key_manager = KeyManager::new();
 
+        if let Some(channel_id) = self.selected_channel_id.clone() {
+            self.async_load_channel_history(&channel_id)?;
+        }
+
         loop {
             let size = terminal.size()?;
             if size != self.size {
@@ -259,6 +296,10 @@ impl App {
                 }
                 Event::Message(message) => self.add_message(*message),
                 Event::Tick => {}
+            }
+
+            if let Some(task_result) = self.loader.pending_result() {
+                self.accept_task_result(task_result)?;
             }
         }
 
@@ -308,6 +349,10 @@ impl App {
         Ref::map(self.chat_canvas.borrow(), |option| option.as_ref().unwrap())
     }
 
+    fn clear_chat_canvas_cache(&self) {
+        self.chat_canvas.replace(None);
+    }
+
     fn enter_mode(&mut self, new_mode: Mode) {
         self.current_mode = new_mode;
     }
@@ -336,27 +381,32 @@ impl App {
         }
     }
 
-    fn select_channel_from_selector(&mut self) {
-        let id = self.channel_selector.select(&self.channels);
-        let message = format!(
-            "Switching to channel {}",
-            self.channels
-                .get(&id)
-                .map(Channel::name)
-                .unwrap_or("(unknown channel)")
-        );
-        self.add_fake_message(Some(&message));
+    fn select_channel(&mut self, id: ChannelID) -> Result<(), Error> {
+        self.async_load_channel_history(&id)?;
         self.selected_channel_id = Some(id);
+        self.history_scroll = 0;
+        self.clear_chat_canvas_cache();
+        Ok(())
+    }
+
+    fn select_channel_from_selector(&mut self) -> Result<(), Error> {
+        let id = self.channel_selector.select(&self.channels);
+        self.select_channel(id)
     }
 
     fn toggle_loading_state(&mut self) {
-        self.is_loading_more_messages = !self.is_loading_more_messages;
-        self.chat_canvas.replace(None);
+        let new_state = !self.is_loading_more_messages;
+        self.set_loading_state(new_state);
+    }
+
+    fn set_loading_state(&mut self, state: bool) {
+        self.is_loading_more_messages = state;
+        self.clear_chat_canvas_cache();
     }
 
     fn add_message(&mut self, message: Message) {
         self.messages.add(message);
-        self.chat_canvas.replace(None);
+        self.clear_chat_canvas_cache();
     }
 
     fn add_fake_message(&mut self, msg: Option<&str>) {
@@ -379,7 +429,55 @@ impl App {
             thread_id: time.into(),
             channel_id,
         });
-        self.chat_canvas.replace(None);
+        self.clear_chat_canvas_cache();
+    }
+
+    fn async_load_channel_history(&mut self, channel_id: &ChannelID) -> Result<(), Error> {
+        self.set_loading_state(true);
+        self.loader.load_channel_history(channel_id, None)
+    }
+
+    fn accept_task_result(&mut self, result: messages::loader::TaskResult) -> Result<(), Error> {
+        use messages::loader::TaskResult;
+        match result {
+            TaskResult::ChannelHistory(_, response) => {
+                self.set_loading_state(false);
+                self.accept_channel_history(response)
+            }
+        }
+    }
+
+    fn accept_channel_history(
+        &mut self,
+        response: Result<
+            slack::api::channels::HistoryResponse,
+            slack::api::channels::HistoryError<slack::api::requests::Error>,
+        >,
+    ) -> Result<(), Error> {
+        match response {
+            Ok(response) => {
+                if let Some(messages) = response.messages {
+                    for message in messages.into_iter() {
+                        match Message::from_slack_message(&message) {
+                            Ok(Some(message)) => self.add_message(message),
+                            Ok(None) => {}
+                            Err(error) => self.add_fake_message(Some(&format_error_with_causes(
+                                error.context(
+                                    "Could not convert Slack message to internal representation",
+                                ),
+                            ))),
+                        }
+                    }
+                }
+                Ok(())
+            }
+            Err(error) => {
+                self.add_fake_message(Some(&format_error_with_causes(
+                    error.context("Could not load channel history"),
+                )));
+                Ok(())
+            }
+        }
     }
 
     fn draw(&mut self, terminal: &mut TerminalBackend) -> Result<(), io::Error> {

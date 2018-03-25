@@ -2,6 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
 
 use slack::api;
+use failure::Error;
 
 use super::prelude::*;
 
@@ -14,22 +15,31 @@ pub struct StandardMessage {
     pub body: String,
 }
 
-impl<'a> From<&'a api::MessageStandard> for StandardMessage {
-    fn from(msg: &'a api::MessageStandard) -> Self {
-        let message_id = MessageID::from(msg.ts.clone().unwrap());
+impl StandardMessage {
+    pub fn from_slack(msg: &api::MessageStandard) -> Result<Self, Error> {
+        let ts = match msg.ts.clone() {
+            Some(val) => val,
+            None => return Err(format_err!("Message had no ts:\n{:#?}", msg)),
+        };
+
+        let channel_id = match msg.channel.clone() {
+            Some(val) => val,
+            None => return Err(format_err!("Message had no channel:\n{:#?}", msg)),
+        };
+
+        let message_id = MessageID::from(ts);
         let thread_id = msg.ts
             .clone()
             .map(MessageID::from)
             .unwrap_or_else(|| message_id.clone());
-        let channel_id = ChannelID::from(msg.channel.clone().unwrap());
 
-        StandardMessage {
+        Ok(StandardMessage {
             message_id,
             thread_id,
-            channel_id,
+            channel_id: ChannelID::from(channel_id),
             body: msg.text.clone().unwrap(),
             from: msg.user.clone().unwrap(),
-        }
+        })
     }
 }
 
@@ -113,6 +123,26 @@ I'm lost. I guess I have to drink my own urine. :)|",
 I'm lost. I guess I |
 have to drink my own|
  urine. :)          |",
+        );
+    }
+
+    #[test]
+    fn it_renders_messages_with_many_characters() {
+        let message = StandardMessage {
+            from: "Data Dump".into(),
+            body: "Imagine that this is a lot of data:\nHello\nAgain".into(),
+            message_id: "1110000.0000".into(),
+            thread_id: "1110000.0000".into(),
+            channel_id: "C1".into(),
+        };
+
+        let big_canvas = message.render_as_canvas(50);
+        assert_eq!(
+            &big_canvas.render_to_string(Some("|")),
+            "Data Dump                                         |
+Imagine that this is a lot of data:               |
+Hello                                             |
+Again                                             |",
         );
     }
 }

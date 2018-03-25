@@ -12,6 +12,7 @@ use failure::Error;
 use canvas::Canvas;
 use chat::ChannelID;
 
+pub mod loader;
 pub use self::buffer::Buffer;
 pub use self::standard::StandardMessage;
 pub use self::loading::LoadingMessage;
@@ -57,7 +58,9 @@ impl Message {
     pub fn from_slack_message(msg: &api::Message) -> Result<Option<Self>, Error> {
         use self::api::Message as S;
         match *msg {
-            S::Standard(ref msg) => Ok(Some(StandardMessage::from(msg).into_message())),
+            S::Standard(ref msg) => {
+                StandardMessage::from_slack(msg).map(|m| Some(m.into_message()))
+            }
             // TODO: slack_api does not have the "channel" key for a lot of messages.
             // Underlying cause: The https://github.com/slack-rs/slack-api-schemas repo does not
             // know what do wo with `"channel": { ... }` in the samples for these messages.
@@ -157,6 +160,16 @@ impl PartialOrd for Message {
 impl Ord for Message {
     fn cmp(&self, rhs: &Message) -> Ordering {
         self.partial_cmp(rhs).unwrap()
+    }
+}
+
+impl MessageID {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn as_string(&self) -> String {
+        self.0.clone()
     }
 }
 

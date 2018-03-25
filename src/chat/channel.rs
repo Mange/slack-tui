@@ -112,6 +112,12 @@ impl ChannelList {
     }
 }
 
+impl ChannelID {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 impl<'a> From<&'a str> for ChannelID {
     fn from(s: &'a str) -> Self {
         ChannelID(String::from(s))
