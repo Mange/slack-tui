@@ -1,6 +1,6 @@
 Tasks to do:
 
-  - Only show messages that are in the current channel.
+  x Only show messages that are in the current channel.
   - Load history when switching channel.
   - Adding the same message to the message buffer again should merge with the old record.
   - Load users, render user names with messages instead.

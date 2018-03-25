@@ -19,7 +19,12 @@ impl Buffer {
         self.messages.insert(message.id().clone(), message);
     }
 
-    pub fn render_as_canvas(&self, width: u16, is_loading_more_messages: bool) -> Canvas {
+    pub fn render_as_canvas(
+        &self,
+        channel_id: &ChannelID,
+        width: u16,
+        is_loading_more_messages: bool,
+    ) -> Canvas {
         use tui::style::Style;
 
         let mut canvas = Canvas::new(width);
@@ -27,7 +32,10 @@ impl Buffer {
             canvas += LoadingMessage::new().render_as_canvas(width);
         }
 
-        for (_id, message) in &self.messages {
+        for (_id, message) in self.messages
+            .iter()
+            .filter(|&(_, m)| m.channel_id() == channel_id)
+        {
             canvas += message.render_as_canvas(width);
             canvas.add_string_truncated("\n", Style::default());
         }
@@ -57,7 +65,7 @@ mod tests {
             channel_id: "C1".into(),
         });
 
-        let canvas = message_buffer.render_as_canvas(10, false);
+        let canvas = message_buffer.render_as_canvas(&"C1".into(), 10, false);
         assert_eq!(
             &canvas.render_to_string(Some("|")),
             "Example   |
@@ -80,7 +88,7 @@ Example   |
             channel_id: "C1".into(),
         });
 
-        let canvas = message_buffer.render_as_canvas(50, true);
+        let canvas = message_buffer.render_as_canvas(&"C1".into(), 50, true);
         assert_eq!(
             &canvas.render_to_string(Some("|")),
             "              Loading more messages               |
@@ -88,5 +96,30 @@ Example                                           |
 Hello World                                       |
                                                   |"
         );
+    }
+
+    #[test]
+    fn it_skips_messages_in_other_channels() {
+        let mut message_buffer = Buffer::new();
+        message_buffer.add(StandardMessage {
+            from: "Example".into(),
+            body: "First channel".into(),
+            message_id: "1110000.0000".into(),
+            thread_id: "1110000.0000".into(),
+            channel_id: "C1".into(),
+        });
+        message_buffer.add(StandardMessage {
+            from: "Example".into(),
+            body: "Second channel".into(),
+            message_id: "1110000.0000".into(),
+            thread_id: "1110000.0000".into(),
+            channel_id: "C2".into(),
+        });
+
+        let canvas = message_buffer.render_as_canvas(&"C2".into(), 50, false);
+        let rendered = canvas.render_to_string(Some("|"));
+
+        assert!(rendered.contains("Second channel"));
+        assert!(!rendered.contains("First channel"));
     }
 }

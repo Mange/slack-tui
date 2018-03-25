@@ -282,13 +282,21 @@ impl App {
         self.selected_channel_id.as_ref()
     }
 
-    fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
+    fn rendered_chat_canvas(
+        &self,
+        current_channel_id: &ChannelID,
+        width: u16,
+        height: u16,
+    ) -> Ref<Canvas> {
         // Populate RefCell inside this scope when not present.
         {
             let mut cache = self.chat_canvas.borrow_mut();
             if cache.is_none() {
-                let canvas = self.messages
-                    .render_as_canvas(width, self.is_loading_more_messages);
+                let canvas = self.messages.render_as_canvas(
+                    current_channel_id,
+                    width,
+                    self.is_loading_more_messages,
+                );
                 *cache = Some(canvas);
             }
         }
