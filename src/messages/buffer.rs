@@ -47,12 +47,14 @@ mod tests {
             body: "Hello...".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
+            channel_id: "C1".into(),
         });
         message_buffer.add(StandardMessage {
             from: "Example".into(),
             body: "...World!".into(),
             message_id: "1110001.0000".into(),
             thread_id: "1110001.0000".into(),
+            channel_id: "C1".into(),
         });
 
         let canvas = message_buffer.render_as_canvas(10, false);
@@ -75,6 +77,7 @@ Example   |
             body: "Hello World".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
+            channel_id: "C1".into(),
         });
 
         let canvas = message_buffer.render_as_canvas(50, true);

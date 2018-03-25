@@ -10,11 +10,18 @@ use slack::api;
 use failure::Error;
 
 use canvas::Canvas;
+use chat::ChannelID;
 
 pub use self::buffer::Buffer;
 pub use self::standard::StandardMessage;
 pub use self::loading::LoadingMessage;
 pub use self::unsupported::UnsupportedMessage;
+
+mod prelude {
+    pub use super::{HistoryEntry, Message, MessageID};
+    pub use chat::ChannelID;
+    pub use canvas::Canvas;
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct MessageID(String);
@@ -27,17 +34,20 @@ pub enum Message {
 
 pub trait HistoryEntry {
     fn id(&self) -> &MessageID;
+    fn channel_id(&self) -> &ChannelID;
+
     fn render_as_canvas(&self, width: u16) -> Canvas;
     fn into_message(self) -> Message;
 }
 
 fn unsupported(
     id: &Option<String>,
+    channel: &Option<String>,
     from: &Option<String>,
     text: &Option<String>,
     subtype: &Option<String>,
 ) -> Result<Option<Message>, Error> {
-    match UnsupportedMessage::from_slack_message(id, from, text, subtype) {
+    match UnsupportedMessage::from_slack_message(id, channel, from, text, subtype) {
         Ok(message) => Ok(Some(message.into_message())),
         Err(error) => Err(error),
     }
@@ -48,58 +58,62 @@ impl Message {
         use self::api::Message as S;
         match *msg {
             S::Standard(ref msg) => Ok(Some(StandardMessage::from(msg).into_message())),
-            S::BotMessage(ref msg) => unsupported(&msg.ts, &msg.username, &msg.text, &msg.subtype),
-            S::ChannelArchive(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::ChannelJoin(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::ChannelLeave(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::ChannelName(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::ChannelPurpose(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::ChannelTopic(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::ChannelUnarchive(ref msg) => {
-                unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype)
-            }
-            S::FileComment(ref msg) => unsupported(
-                &msg.ts,
-                &msg.comment.as_ref().and_then(|c| c.user.clone()),
-                &msg.text,
-                &msg.subtype,
-            ),
-            S::FileMention(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::FileShare(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::GroupArchive(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::GroupJoin(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::GroupLeave(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::GroupName(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::GroupPurpose(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::GroupTopic(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::GroupUnarchive(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
-            S::MeMessage(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
+            // TODO: slack_api does not have the "channel" key for a lot of messages.
+            // Underlying cause: The https://github.com/slack-rs/slack-api-schemas repo does not
+            // know what do wo with `"channel": { ... }` in the samples for these messages.
+            S::BotMessage(_) => Ok(None),
+            S::ChannelArchive(_) => Ok(None),
+            S::ChannelJoin(_) => Ok(None),
+            S::ChannelLeave(_) => Ok(None),
+            S::ChannelName(_) => Ok(None),
+            S::ChannelPurpose(_) => Ok(None),
+            S::ChannelTopic(_) => Ok(None),
+            S::ChannelUnarchive(_) => Ok(None),
+            S::FileComment(_) => Ok(None),
+            S::FileMention(_) => Ok(None),
+            S::FileShare(_) => Ok(None),
+            S::GroupArchive(_) => Ok(None),
+            S::GroupJoin(_) => Ok(None),
+            S::GroupLeave(_) => Ok(None),
+            S::GroupName(_) => Ok(None),
+            S::GroupPurpose(_) => Ok(None),
+            S::GroupTopic(_) => Ok(None),
+            S::GroupUnarchive(_) => Ok(None),
+            S::MeMessage(_) => Ok(None),
             S::MessageChanged(ref msg) => unsupported(
                 &msg.ts,
+                &msg.channel,
                 &msg.message.as_ref().and_then(|m| m.user.clone()),
                 &msg.message.as_ref().and_then(|c| c.text.clone()),
                 &msg.subtype,
             ),
             S::MessageDeleted(ref msg) => unsupported(
                 &msg.ts,
+                &msg.channel,
                 &Some(String::from("Message deleted")),
                 &Some(String::from("Message was deleted")),
                 &msg.subtype,
             ),
             S::MessageReplied(ref msg) => unsupported(
                 &msg.ts,
+                &msg.channel,
                 &msg.message.as_ref().and_then(|m| m.user.clone()),
                 &msg.message.as_ref().and_then(|c| c.text.clone()),
                 &msg.subtype,
             ),
-            S::PinnedItem(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
+            S::PinnedItem(ref msg) => {
+                unsupported(&msg.ts, &msg.channel, &msg.user, &msg.text, &msg.subtype)
+            }
             S::ReplyBroadcast(ref msg) => unsupported(
                 &msg.ts,
+                &msg.channel,
                 &msg.user,
                 &Some(String::from("Message got a broadcasted reply")),
                 &msg.subtype,
             ),
-            S::UnpinnedItem(ref msg) => unsupported(&msg.ts, &msg.user, &msg.text, &msg.subtype),
+            S::UnpinnedItem(ref msg) => {
+                unsupported(&msg.ts, &msg.channel, &msg.user, &msg.text, &msg.subtype)
+            }
         }
     }
 }
@@ -110,6 +124,14 @@ impl HistoryEntry for Message {
         match *self {
             Standard(ref msg) => msg.id(),
             Unsupported(ref msg) => msg.id(),
+        }
+    }
+
+    fn channel_id(&self) -> &ChannelID {
+        use self::Message::*;
+        match *self {
+            Standard(ref msg) => msg.channel_id(),
+            Unsupported(ref msg) => msg.channel_id(),
         }
     }
 

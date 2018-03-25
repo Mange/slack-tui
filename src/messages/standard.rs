@@ -3,13 +3,13 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 
 use slack::api;
 
-use super::{HistoryEntry, Message, MessageID};
-use canvas::Canvas;
+use super::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct StandardMessage {
     pub message_id: MessageID,
     pub thread_id: MessageID,
+    pub channel_id: ChannelID,
     pub from: String,
     pub body: String,
 }
@@ -21,10 +21,12 @@ impl<'a> From<&'a api::MessageStandard> for StandardMessage {
             .clone()
             .map(MessageID::from)
             .unwrap_or_else(|| message_id.clone());
+        let channel_id = ChannelID::from(msg.channel.clone().unwrap());
 
         StandardMessage {
             message_id,
             thread_id,
+            channel_id,
             body: msg.text.clone().unwrap(),
             from: msg.user.clone().unwrap(),
         }
@@ -62,6 +64,10 @@ impl HistoryEntry for StandardMessage {
         &self.message_id
     }
 
+    fn channel_id(&self) -> &ChannelID {
+        &self.channel_id
+    }
+
     fn render_as_canvas(&self, width: u16) -> Canvas {
         use tui::style::*;
 
@@ -90,6 +96,7 @@ mod tests {
             body: "I'm lost. I guess I have to drink my own urine. :)".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
+            channel_id: "C1".into(),
         };
 
         let big_canvas = message.render_as_canvas(50);

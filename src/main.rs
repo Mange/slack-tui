@@ -278,6 +278,10 @@ impl App {
             .and_then(|id| self.channels.get(id))
     }
 
+    fn selected_channel_id(&self) -> Option<&ChannelID> {
+        self.selected_channel_id.as_ref()
+    }
+
     fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
         // Populate RefCell inside this scope when not present.
         {
@@ -355,11 +359,17 @@ impl App {
             None => format!("This is a fake message generated at: {}", time),
         };
 
+        let channel_id = match self.selected_channel_id() {
+            Some(val) => val.clone(),
+            None => return,
+        };
+
         self.messages.add(messages::StandardMessage {
             from: "Fake Message".into(),
             body: message,
             message_id: time.into(),
             thread_id: time.into(),
+            channel_id,
         });
         self.chat_canvas.replace(None);
     }

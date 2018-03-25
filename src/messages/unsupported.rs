@@ -3,12 +3,12 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 
 use failure::Error;
 
-use super::{HistoryEntry, Message, MessageID};
-use canvas::Canvas;
+use super::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct UnsupportedMessage {
     pub id: MessageID,
+    pub channel_id: ChannelID,
     pub from: String,
     pub text: String,
     pub subtype: Option<String>,
@@ -43,6 +43,7 @@ impl Ord for UnsupportedMessage {
 impl UnsupportedMessage {
     pub fn from_slack_message(
         id: &Option<String>,
+        channel_id: &Option<String>,
         from: &Option<String>,
         text: &Option<String>,
         subtype: &Option<String>,
@@ -51,6 +52,10 @@ impl UnsupportedMessage {
             id: id.clone()
                 .map(MessageID::from)
                 .ok_or_else(|| format_err!("ID was blank"))?,
+            channel_id: channel_id
+                .clone()
+                .map(ChannelID::from)
+                .ok_or_else(|| format_err!("Channel ID was blank"))?,
             from: from.clone().ok_or_else(|| format_err!("from is missing"))?,
             text: text.clone().ok_or_else(|| format_err!("text is missing"))?,
             subtype: subtype.clone(),
@@ -61,6 +66,10 @@ impl UnsupportedMessage {
 impl HistoryEntry for UnsupportedMessage {
     fn id(&self) -> &MessageID {
         &self.id
+    }
+
+    fn channel_id(&self) -> &ChannelID {
+        &self.channel_id
     }
 
     fn render_as_canvas(&self, width: u16) -> Canvas {
@@ -95,6 +104,7 @@ mod tests {
     fn it_renders_as_canvas() {
         let message = UnsupportedMessage {
             id: "1110000.000000".into(),
+            channel_id: "C1".into(),
             from: "Mystery".into(),
             text: "Thing happened".into(),
             subtype: Some(String::from("mystery_event")),
