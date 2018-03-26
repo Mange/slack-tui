@@ -330,6 +330,10 @@ impl App {
         self.history_scroll.min(self.max_history_scroll())
     }
 
+    fn chat_height(&self) -> u16 {
+        self.last_chat_height.get()
+    }
+
     fn selected_channel(&self) -> Option<&Channel> {
         self.selected_channel_id
             .as_ref()
@@ -374,13 +378,14 @@ impl App {
         self.current_mode = new_mode;
     }
 
-    fn scroll_down(&mut self) {
+    fn scroll_down(&mut self, amount: usize) {
         // NOTE: Scroll value is distance from bottom
-        self.history_scroll = self.current_history_scroll().saturating_sub(1);
+        self.history_scroll = self.current_history_scroll().saturating_sub(amount);
     }
 
-    fn scroll_up(&mut self) {
-        self.history_scroll = (self.history_scroll + 1).min(self.max_history_scroll());
+    fn scroll_up(&mut self, amount: usize) {
+        self.history_scroll =
+            (self.history_scroll.saturating_add(amount)).min(self.max_history_scroll());
     }
 
     fn select_channel(&mut self, id: ChannelID) -> Result<(), Error> {

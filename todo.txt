@@ -26,10 +26,10 @@ Just some basic ideas.
 
 History mode
   x j/k - scroll down / up
-  - C-f - page down
-  - C-b - page up
-  - gg  - Go to top
-  - C-g - Go to bottom
+  x C-f - page down
+  x C-b - page up
+  - gg  - Go to top (requires chord)
+  x S-g - Go to bottom
   - i   - Insert mode
   - gn  - Normal mode (requires chord; temporarily use "c"?)
   x q   - Quit (Temporary! Need to add an Command mode)
@@ -41,13 +41,13 @@ Normal mode:
   - b   - Backward word
   - C-f - page down in reply input
   - C-b - page up in reply input
-  - gg  - Go to top in reply input
+  - gg  - Go to top in reply input (requires chord)
   - C-g - Go to bottom in reply input
   - i   - Insert mode
   - o   - New line + Insert mode
   - O   - New line above + Insert mode
   - ....
-  - gh  - History mode
+  - gh  - History mode (requires chord)
 
 Insert mode:
   - Esc - Normal mode

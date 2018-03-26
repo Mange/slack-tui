@@ -26,8 +26,22 @@ impl KeyManager {
         use event::Key::*;
         match input {
             Char('q') => return Outcome::Quit,
-            Char('j') => app.scroll_down(),
-            Char('k') => app.scroll_up(),
+            Char('j') => app.scroll_down(1),
+            Char('k') => app.scroll_up(1),
+            Ctrl('f') => {
+                // Leave 2 lines from last page visible
+                let page_size = app.chat_height().saturating_sub(2);
+                app.scroll_down(page_size as usize);
+            }
+            Ctrl('b') => {
+                // Leave 2 lines from last page visible
+                let page_size = app.chat_height().saturating_sub(2);
+                app.scroll_up(page_size as usize)
+            }
+            Char('G') => {
+                let distance = app.current_history_scroll();
+                app.scroll_down(distance)
+            }
             Char('b') => app.add_fake_message(None),
             Char('B') => app.toggle_loading_state(),
             Ctrl('k') => app.enter_mode(Mode::SelectChannel),
