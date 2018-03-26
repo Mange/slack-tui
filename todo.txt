@@ -1,6 +1,20 @@
 Tasks to do:
 
   x Only show messages that are in the current channel.
+  - Move around modules a bit
+    * components
+      (ChannelSelect, InputManager, then later also ChatHistory component,
+      input box, etc.)
+    * models
+      (MessageID, Channel, Message, etc.)
+      * message
+        * standard, etc.
+    * widgets
+      (rendering of components, or component-less widgets like Scrollbar)
+    * data
+      (data loading; converting slack into models)
+    * models should not depend on data, but data can depend on models.
+    * widgets may depend on components and models, but not the other way around.
   - Load history when switching channel.
   - Adding the same message to the message buffer again should merge with the old record.
   - Load users, render user names with messages instead.
@@ -8,7 +22,8 @@ Tasks to do:
   - Add input for writing replies.
     - (very simple Insert and Normal modes)
     - Actually send the text.
-    - Transform text before sending; @references, URLs, etc. (Remember to escape things already in the message)
+    - Transform text before sending; @references, URLs, etc.
+      (Remember to escape things already in the message)
     - Typing indicators when inside Insert/Normal mode.
   - Render thread message count on messages.
 

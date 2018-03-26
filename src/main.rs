@@ -8,6 +8,7 @@ extern crate tui;
 #[macro_use]
 extern crate failure;
 
+mod data;
 mod canvas;
 mod channel_selector;
 mod chat;
@@ -66,10 +67,9 @@ pub struct App {
     messages: messages::Buffer,
     selected_channel_id: Option<ChannelID>,
     size: Rect,
-    slack_api_token: String,
     team_name: String,
 
-    loader: messages::loader::Loader,
+    loader: data::loader::Loader,
 
     // For Mode::SelectChannel
     channel_selector: ChannelSelector,
@@ -228,9 +228,8 @@ impl App {
             messages: messages::Buffer::new(),
             selected_channel_id,
             size,
-            slack_api_token: slack_api_token.to_owned(),
             team_name,
-            loader: messages::loader::Loader::create(slack_api_token)?,
+            loader: data::loader::Loader::create(slack_api_token)?,
         })
     }
 
@@ -454,8 +453,8 @@ impl App {
         self.loader.load_channel_history(channel_id, None)
     }
 
-    fn accept_task_result(&mut self, result: messages::loader::TaskResult) -> Result<(), Error> {
-        use messages::loader::TaskResult;
+    fn accept_task_result(&mut self, result: data::loader::TaskResult) -> Result<(), Error> {
+        use data::loader::TaskResult;
         match result {
             TaskResult::ChannelHistory(_, response) => {
                 self.set_loading_state(false);

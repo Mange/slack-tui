@@ -13,7 +13,6 @@ use failure::Error;
 use canvas::Canvas;
 use chat::ChannelID;
 
-pub mod loader;
 pub use self::buffer::Buffer;
 pub use self::error::ErrorMessage;
 pub use self::standard::StandardMessage;

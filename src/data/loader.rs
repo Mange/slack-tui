@@ -6,7 +6,7 @@ use slack::api;
 use failure::Error;
 
 use chat::ChannelID;
-use super::MessageID;
+use messages::MessageID;
 
 #[derive(Debug)]
 enum Task {
