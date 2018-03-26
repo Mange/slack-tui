@@ -107,9 +107,11 @@ fn render_statusbar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     };
     Paragraph::default()
         .text(&format!(
-            "{{{mode_color} [{mode}]}} - {{fg=dark_gray Peter is typing...}}",
+            "{{{mode_color} {mode}}} - [{offset}/{height}]",
             mode = mode,
-            mode_color = mode_color
+            mode_color = mode_color,
+            offset = app.history_scroll,
+            height = app.max_history_scroll(),
         ))
         .style(Style::default().bg(Color::Gray).fg(Color::White))
         .render(terminal, rect);

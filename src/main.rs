@@ -308,9 +308,26 @@ impl App {
         Ok(())
     }
 
+    fn max_history_scroll(&self) -> usize {
+        // NOTE: Scroll value is distance from bottom
+        let chat_canvas_height = {
+            match *self.chat_canvas.borrow() {
+                Some(ref canvas) => canvas.height(),
+                None => return 0,
+            }
+        };
+        let chat_viewport_height = self.last_chat_height.get();
+
+        // If the canvas is smaller than the viewport, lock to bottom.
+        if chat_canvas_height <= chat_viewport_height {
+            0
+        } else {
+            chat_canvas_height as usize - chat_viewport_height as usize
+        }
+    }
+
     fn current_history_scroll(&self) -> usize {
-        self.history_scroll
-            .min(self.last_chat_height.get() as usize)
+        self.history_scroll.min(self.max_history_scroll())
     }
 
     fn selected_channel(&self) -> Option<&Channel> {
@@ -363,22 +380,7 @@ impl App {
     }
 
     fn scroll_up(&mut self) {
-        // NOTE: Scroll value is distance from bottom
-        let chat_canvas_height = {
-            match *self.chat_canvas.borrow() {
-                Some(ref canvas) => canvas.height(),
-                None => return,
-            }
-        };
-        let chat_viewport_height = self.last_chat_height.get();
-
-        // If the canvas is smaller than the viewport, lock to bottom.
-        if chat_canvas_height <= chat_viewport_height {
-            self.history_scroll = 0;
-        } else {
-            let max_scroll = chat_canvas_height - chat_viewport_height;
-            self.history_scroll = (self.current_history_scroll() + 1).min(max_scroll as usize);
-        }
+        self.history_scroll = (self.history_scroll + 1).min(self.max_history_scroll());
     }
 
     fn select_channel(&mut self, id: ChannelID) -> Result<(), Error> {
