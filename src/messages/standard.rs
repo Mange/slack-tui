@@ -37,7 +37,7 @@ impl StandardMessage {
             message_id,
             thread_id,
             channel_id: ChannelID::from(channel_id),
-            body: msg.text.clone().unwrap(),
+            body: msg.text.clone().unwrap_or_else(|| String::new()),
             from: msg.user.clone().unwrap(),
         })
     }

@@ -1,4 +1,5 @@
 mod buffer;
+mod error;
 mod loading;
 mod standard;
 mod unsupported;
@@ -14,6 +15,7 @@ use chat::ChannelID;
 
 pub mod loader;
 pub use self::buffer::Buffer;
+pub use self::error::ErrorMessage;
 pub use self::standard::StandardMessage;
 pub use self::loading::LoadingMessage;
 pub use self::unsupported::UnsupportedMessage;
@@ -31,6 +33,7 @@ pub struct MessageID(String);
 pub enum Message {
     Standard(StandardMessage),
     Unsupported(UnsupportedMessage),
+    Error(ErrorMessage),
 }
 
 pub trait HistoryEntry {
@@ -127,6 +130,7 @@ impl HistoryEntry for Message {
         match *self {
             Standard(ref msg) => msg.id(),
             Unsupported(ref msg) => msg.id(),
+            Error(ref msg) => msg.id(),
         }
     }
 
@@ -135,6 +139,7 @@ impl HistoryEntry for Message {
         match *self {
             Standard(ref msg) => msg.channel_id(),
             Unsupported(ref msg) => msg.channel_id(),
+            Error(ref msg) => msg.channel_id(),
         }
     }
 
@@ -143,6 +148,7 @@ impl HistoryEntry for Message {
         match *self {
             Standard(ref msg) => msg.render_as_canvas(width),
             Unsupported(ref msg) => msg.render_as_canvas(width),
+            Error(ref msg) => msg.render_as_canvas(width),
         }
     }
 

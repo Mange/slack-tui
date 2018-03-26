@@ -432,6 +432,16 @@ impl App {
         self.clear_chat_canvas_cache();
     }
 
+    fn add_error_message<E: Fail>(&mut self, error: E) {
+        let channel_id = match self.selected_channel_id {
+            Some(ref val) => val,
+            None => return,
+        };
+        self.messages
+            .add(messages::ErrorMessage::from_error(channel_id, error));
+        self.clear_chat_canvas_cache();
+    }
+
     fn async_load_channel_history(&mut self, channel_id: &ChannelID) -> Result<(), Error> {
         self.set_loading_state(true);
         self.loader.load_channel_history(channel_id, None)
@@ -461,20 +471,16 @@ impl App {
                         match Message::from_slack_message(&message) {
                             Ok(Some(message)) => self.add_message(message),
                             Ok(None) => {}
-                            Err(error) => self.add_fake_message(Some(&format_error_with_causes(
-                                error.context(
-                                    "Could not convert Slack message to internal representation",
-                                ),
-                            ))),
+                            Err(error) => self.add_error_message(error.context(
+                                "Could not convert Slack message to internal representation",
+                            )),
                         }
                     }
                 }
                 Ok(())
             }
             Err(error) => {
-                self.add_fake_message(Some(&format_error_with_causes(
-                    error.context("Could not load channel history"),
-                )));
+                self.add_error_message(error.context("Could not load channel history"));
                 Ok(())
             }
         }
