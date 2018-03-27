@@ -35,7 +35,7 @@ fn render_sidebar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
     let mut block = Block::default().borders(Borders::RIGHT);
     block.render(terminal, rect);
 
-    widgets::ChannelList::new(&app.channels, app.selected_channel_id.as_ref())
+    widgets::ChannelList::new(&app.channels, app.selected_channel_id())
         .render(terminal, &block.inner(rect));
 }
 
@@ -87,13 +87,8 @@ fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
         return;
     }
 
-    let channel_id = match app.selected_channel_id() {
-        Some(id) => id,
-        None => return,
-    };
-
     // Leave one width for scrollbar
-    let canvas = app.rendered_chat_canvas(channel_id, rect.width - 1, rect.height);
+    let canvas = app.rendered_chat_canvas(rect.width - 1, rect.height);
 
     ChatHistory::with_canvas(&canvas)
         .scroll(app.current_history_scroll())

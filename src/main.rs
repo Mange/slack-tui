@@ -62,7 +62,7 @@ pub struct App {
     current_mode: Mode,
     history_scroll: usize,
     last_chat_height: Cell<u16>,
-    selected_channel_id: Option<ChannelID>,
+    selected_channel_id: ChannelID,
     size: Rect,
 
     // Data
@@ -221,6 +221,10 @@ impl App {
             .iter()
             .find(|&(_id, channel)| channel.is_member())
             .map(|(id, _channel)| id.clone());
+        let selected_channel_id = match selected_channel_id {
+            Some(val) => val,
+            None => return Err(format_err!("Could not find any channels in the Team")),
+        };
 
         let team_name = response
             .team
@@ -282,9 +286,8 @@ impl App {
 
         let mut key_manager = KeyManager::new();
 
-        if let Some(channel_id) = self.selected_channel_id.clone() {
-            self.async_load_channel_history(&channel_id)?;
-        }
+        let selected_channel_id = self.selected_channel_id.clone();
+        self.async_load_channel_history(&selected_channel_id)?;
 
         loop {
             let size = terminal.size()?;
@@ -347,27 +350,20 @@ impl App {
     }
 
     fn selected_channel(&self) -> Option<&Channel> {
-        self.selected_channel_id
-            .as_ref()
-            .and_then(|id| self.channels.get(id))
+        self.channels.get(&self.selected_channel_id)
     }
 
-    fn selected_channel_id(&self) -> Option<&ChannelID> {
-        self.selected_channel_id.as_ref()
+    fn selected_channel_id(&self) -> &ChannelID {
+        &self.selected_channel_id
     }
 
-    fn rendered_chat_canvas(
-        &self,
-        current_channel_id: &ChannelID,
-        width: u16,
-        height: u16,
-    ) -> Ref<Canvas> {
+    fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
         // Populate RefCell inside this scope when not present.
         {
             let mut cache = self.chat_canvas.borrow_mut();
             if cache.is_none() {
                 let canvas = self.messages.render_as_canvas(
-                    current_channel_id,
+                    self.selected_channel_id(),
                     width,
                     self.is_loading_more_messages,
                 );
@@ -402,7 +398,7 @@ impl App {
 
     fn select_channel(&mut self, id: ChannelID) -> Result<(), Error> {
         self.async_load_channel_history(&id)?;
-        self.selected_channel_id = Some(id);
+        self.selected_channel_id = id;
         self.history_scroll = 0;
         self.clear_chat_canvas_cache();
         Ok(())
@@ -436,28 +432,21 @@ impl App {
             None => format!("This is a fake message generated at: {}", time),
         };
 
-        let channel_id = match self.selected_channel_id() {
-            Some(val) => val.clone(),
-            None => return,
-        };
-
         self.messages.add(messages::StandardMessage {
             from: "Fake Message".into(),
             body: message,
             message_id: time.into(),
             thread_id: time.into(),
-            channel_id,
+            channel_id: self.selected_channel_id.clone(),
         });
         self.clear_chat_canvas_cache();
     }
 
     fn add_error_message<E: Fail>(&mut self, error: E) {
-        let channel_id = match self.selected_channel_id {
-            Some(ref val) => val,
-            None => return,
-        };
-        self.messages
-            .add(messages::ErrorMessage::from_error(channel_id, error));
+        self.messages.add(messages::ErrorMessage::from_error(
+            &self.selected_channel_id,
+            error,
+        ));
         self.clear_chat_canvas_cache();
     }
 

@@ -9,7 +9,7 @@ use chat::{self, ChannelID};
 
 pub struct ChannelList<'a> {
     channels: &'a chat::ChannelList,
-    selected_id: Option<&'a ChannelID>,
+    selected_id: &'a ChannelID,
 }
 
 struct ChannelEntry<'a> {
@@ -20,7 +20,7 @@ struct ChannelEntry<'a> {
 }
 
 impl<'a> ChannelList<'a> {
-    pub fn new(channels: &'a chat::ChannelList, selected_id: Option<&'a ChannelID>) -> Self {
+    pub fn new(channels: &'a chat::ChannelList, selected_id: &'a ChannelID) -> Self {
         ChannelList {
             channels,
             selected_id,
@@ -42,9 +42,7 @@ impl<'a> Widget for ChannelList<'a> {
                 id: channel.id(),
                 name: channel.name(),
                 has_unreads: false,
-                is_selected: self.selected_id
-                    .map(|id| id == channel.id())
-                    .unwrap_or(false),
+                is_selected: self.selected_id == channel.id(),
             };
             if channel.is_starred() {
                 starred.push(entry);
