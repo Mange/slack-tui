@@ -38,6 +38,18 @@ impl User {
         })
     }
 
+    #[cfg(test)]
+    pub fn fixture<I, S>(id: I, display_name: S) -> User
+    where
+        I: Into<UserID>,
+        S: Into<String>,
+    {
+        User {
+            id: id.into(),
+            display_name: display_name.into(),
+        }
+    }
+
     pub fn id(&self) -> &UserID {
         &self.id
     }

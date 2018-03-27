@@ -5,13 +5,14 @@ use slack::api;
 use failure::Error;
 
 use super::prelude::*;
+use models::UserID;
 
 #[derive(Clone, Debug)]
 pub struct StandardMessage {
     pub message_id: MessageID,
     pub thread_id: MessageID,
     pub channel_id: ChannelID,
-    pub from: String,
+    pub user_id: UserID,
     pub body: String,
 }
 
@@ -45,7 +46,7 @@ impl StandardMessage {
             thread_id,
             channel_id,
             body: msg.text.clone().unwrap_or_else(|| String::new()),
-            from: msg.user.clone().unwrap(),
+            user_id: msg.user.clone().map(UserID::from).unwrap(),
         })
     }
 }
@@ -85,12 +86,17 @@ impl HistoryEntry for StandardMessage {
         &self.channel_id
     }
 
-    fn render_as_canvas(&self, _state: &AppState, width: u16) -> Canvas {
+    fn render_as_canvas(&self, state: &AppState, width: u16) -> Canvas {
         use tui::style::*;
+
+        let user = state.users.get(&self.user_id);
 
         let underlined = Style::default().modifier(Modifier::Underline);
         let mut canvas = Canvas::new(width);
-        canvas.add_string_truncated(&self.from, underlined);
+        match user {
+            Some(user) => canvas.add_string_truncated(user.display_name(), underlined),
+            None => canvas.add_string_truncated(self.user_id.as_str(), underlined),
+        }
         canvas.add_string_truncated("\n", Style::default());
         canvas.add_string_wrapped(&format!("{}\n", self.body), Style::default());
 
@@ -154,9 +160,13 @@ mod tests {
 
     #[test]
     fn it_renders_as_canvas() {
-        let state = AppState::fixture();
+        use models::User;
+
+        let mut state = AppState::fixture();
+        state.users.add_user(User::fixture("U42", "Bear Grylls"));
+
         let message = StandardMessage {
-            from: "Bear Grylls".into(),
+            user_id: "U42".into(),
             body: "I'm lost. I guess I have to drink my own urine. :)".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
@@ -184,7 +194,7 @@ have to drink my own|
     fn it_renders_messages_with_many_characters() {
         let state = AppState::fixture();
         let message = StandardMessage {
-            from: "Data Dump".into(),
+            user_id: "Data Dump".into(),
             body: "Imagine that this is a lot of data:\nHello\nAgain".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),

@@ -147,7 +147,7 @@ impl AppState {
         };
 
         self.messages.add(messages::StandardMessage {
-            from: "Fake Message".into(),
+            user_id: "Fake Message".into(),
             body: message,
             message_id: time.into(),
             thread_id: time.into(),

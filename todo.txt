@@ -3,7 +3,7 @@ Tasks to do:
   x Only show messages that are in the current channel.
   x Load history when switching channel.
   - Adding the same message to the message buffer again should merge with the old record.
-  - Load users, render user names with messages instead.
+  x Load users, render user names with messages instead.
   - Parse message text markup.
   - Add input for writing replies.
     - (very simple Insert and Normal modes)

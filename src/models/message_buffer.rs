@@ -42,22 +42,24 @@ impl MessageBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use models::User;
 
     #[test]
     fn it_renders_messages_as_canvas() {
         let mut state = AppState::fixture();
         state.selected_channel_id = ChannelID::from("C1");
+        state.users.add_user(User::fixture("U55", "Example"));
 
         let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
-            from: "Example".into(),
+            user_id: "U55".into(),
             body: "Hello...".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
             channel_id: "C1".into(),
         });
         message_buffer.add(StandardMessage {
-            from: "Example".into(),
+            user_id: "U55".into(),
             body: "...World!".into(),
             message_id: "1110001.0000".into(),
             thread_id: "1110001.0000".into(),
@@ -81,7 +83,7 @@ Example   |
         let mut state = AppState::fixture();
         let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
-            from: "Example".into(),
+            user_id: "U55".into(),
             body: "Hello World".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
@@ -94,7 +96,7 @@ Example   |
         assert_eq!(
             &canvas.render_to_string(Some("|")),
             "              Loading more messages               |
-Example                                           |
+U55                                               |
 Hello World                                       |
                                                   |"
         );
@@ -107,14 +109,14 @@ Hello World                                       |
 
         let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
-            from: "Example".into(),
+            user_id: "Example".into(),
             body: "First channel".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
             channel_id: "C1".into(),
         });
         message_buffer.add(StandardMessage {
-            from: "Example".into(),
+            user_id: "Example".into(),
             body: "Second channel".into(),
             message_id: "1110000.0000".into(),
             thread_id: "1110000.0000".into(),
