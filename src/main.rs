@@ -34,7 +34,7 @@ use termion::input::TermRead;
 use failure::{Error, Fail, ResultExt};
 
 use canvas::Canvas;
-use chat::{Channel, ChannelID, ChannelList};
+use chat::{Channel, ChannelID, ChannelList, User, UserID, UserList};
 use input_manager::KeyManager;
 use channel_selector::ChannelSelector;
 use messages::Message;
@@ -58,18 +58,20 @@ enum Mode {
 }
 
 pub struct App {
-    channels: ChannelList,
     chat_canvas: RefCell<Option<Canvas>>,
     current_mode: Mode,
     history_scroll: usize,
-    is_loading_more_messages: bool,
     last_chat_height: Cell<u16>,
-    messages: messages::Buffer,
     selected_channel_id: Option<ChannelID>,
     size: Rect,
-    team_name: String,
 
+    // Data
+    channels: ChannelList,
+    is_loading_more_messages: bool,
     loader: data::loader::Loader,
+    messages: messages::Buffer,
+    team_name: String,
+    users: UserList,
 
     // For Mode::SelectChannel
     channel_selector: ChannelSelector,
@@ -197,6 +199,15 @@ fn run(terminal: &mut TerminalBackend) -> Result<(), Error> {
 impl App {
     fn new(slack_api_token: &str, size: Rect, rtm: &slack::RtmClient) -> Result<App, Error> {
         let response = rtm.start_response();
+
+        let users: UserList = response
+            .users
+            .clone()
+            .expect("Slack did not provide a user list on login")
+            .iter()
+            .flat_map(User::from_slack)
+            .collect();
+
         let channels: ChannelList = response
             .channels
             .clone()
@@ -204,6 +215,7 @@ impl App {
             .iter()
             .flat_map(Channel::from_slack)
             .collect();
+
         // TODO: Pick a channel using a more intelligent way...
         let selected_channel_id = channels
             .iter()
@@ -225,11 +237,12 @@ impl App {
             history_scroll: 0,
             is_loading_more_messages: false,
             last_chat_height: Cell::new(0),
+            loader: data::loader::Loader::create(slack_api_token)?,
             messages: messages::Buffer::new(),
             selected_channel_id,
             size,
             team_name,
-            loader: data::loader::Loader::create(slack_api_token)?,
+            users,
         })
     }
 
