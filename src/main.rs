@@ -4,7 +4,6 @@ extern crate slack;
 extern crate termion;
 extern crate tui;
 
-#[allow(unused_imports)]
 #[macro_use]
 extern crate failure;
 

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use models::messages::*;
-use models::{Canvas, ChannelID};
+use models::{AppState, Canvas, ChannelID};
 
 #[derive(Debug, Default)]
 pub struct MessageBuffer {
@@ -20,24 +20,19 @@ impl MessageBuffer {
         self.messages.insert(message.id().clone(), message);
     }
 
-    pub fn render_as_canvas(
-        &self,
-        channel_id: &ChannelID,
-        width: u16,
-        is_loading_more_messages: bool,
-    ) -> Canvas {
+    pub fn render_as_canvas(&self, state: &AppState, width: u16) -> Canvas {
         use tui::style::Style;
 
         let mut canvas = Canvas::new(width);
-        if is_loading_more_messages {
-            canvas += LoadingMessage::new().render_as_canvas(width);
+        if state.is_loading_more_messages {
+            canvas += LoadingMessage::new().render_as_canvas(state, width);
         }
 
         for (_id, message) in self.messages
             .iter()
-            .filter(|&(_, m)| m.channel_id() == channel_id)
+            .filter(|&(_, m)| m.channel_id() == state.selected_channel_id())
         {
-            canvas += message.render_as_canvas(width);
+            canvas += message.render_as_canvas(state, width);
             canvas.add_string_truncated("\n", Style::default());
         }
         canvas
@@ -50,6 +45,9 @@ mod tests {
 
     #[test]
     fn it_renders_messages_as_canvas() {
+        let mut state = AppState::fixture();
+        state.selected_channel_id = ChannelID::from("C1");
+
         let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
             from: "Example".into(),
@@ -66,7 +64,7 @@ mod tests {
             channel_id: "C1".into(),
         });
 
-        let canvas = message_buffer.render_as_canvas(&"C1".into(), 10, false);
+        let canvas = message_buffer.render_as_canvas(&state, 10);
         assert_eq!(
             &canvas.render_to_string(Some("|")),
             "Example   |
@@ -80,6 +78,7 @@ Example   |
 
     #[test]
     fn it_adds_loading_message_when_loading() {
+        let mut state = AppState::fixture();
         let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
             from: "Example".into(),
@@ -89,7 +88,9 @@ Example   |
             channel_id: "C1".into(),
         });
 
-        let canvas = message_buffer.render_as_canvas(&"C1".into(), 50, true);
+        state.selected_channel_id = ChannelID::from("C1");
+        state.is_loading_more_messages = true;
+        let canvas = message_buffer.render_as_canvas(&state, 50);
         assert_eq!(
             &canvas.render_to_string(Some("|")),
             "              Loading more messages               |
@@ -101,6 +102,9 @@ Hello World                                       |
 
     #[test]
     fn it_skips_messages_in_other_channels() {
+        let mut state = AppState::fixture();
+        state.selected_channel_id = ChannelID::from("C2");
+
         let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
             from: "Example".into(),
@@ -117,7 +121,7 @@ Hello World                                       |
             channel_id: "C2".into(),
         });
 
-        let canvas = message_buffer.render_as_canvas(&"C2".into(), 50, false);
+        let canvas = message_buffer.render_as_canvas(&state, 50);
         let rendered = canvas.render_to_string(Some("|"));
 
         assert!(rendered.contains("Second channel"));

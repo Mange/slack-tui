@@ -85,7 +85,7 @@ impl HistoryEntry for StandardMessage {
         &self.channel_id
     }
 
-    fn render_as_canvas(&self, width: u16) -> Canvas {
+    fn render_as_canvas(&self, _state: &AppState, width: u16) -> Canvas {
         use tui::style::*;
 
         let underlined = Style::default().modifier(Modifier::Underline);
@@ -154,6 +154,7 @@ mod tests {
 
     #[test]
     fn it_renders_as_canvas() {
+        let state = AppState::fixture();
         let message = StandardMessage {
             from: "Bear Grylls".into(),
             body: "I'm lost. I guess I have to drink my own urine. :)".into(),
@@ -162,14 +163,14 @@ mod tests {
             channel_id: "C1".into(),
         };
 
-        let big_canvas = message.render_as_canvas(50);
+        let big_canvas = message.render_as_canvas(&state, 50);
         assert_eq!(
             &big_canvas.render_to_string(Some("|")),
             "Bear Grylls                                       |
 I'm lost. I guess I have to drink my own urine. :)|",
         );
 
-        let small_canvas = message.render_as_canvas(20);
+        let small_canvas = message.render_as_canvas(&state, 20);
         assert_eq!(
             &small_canvas.render_to_string(Some("|")),
             "Bear Grylls         |
@@ -181,6 +182,7 @@ have to drink my own|
 
     #[test]
     fn it_renders_messages_with_many_characters() {
+        let state = AppState::fixture();
         let message = StandardMessage {
             from: "Data Dump".into(),
             body: "Imagine that this is a lot of data:\nHello\nAgain".into(),
@@ -189,7 +191,7 @@ have to drink my own|
             channel_id: "C1".into(),
         };
 
-        let big_canvas = message.render_as_canvas(50);
+        let big_canvas = message.render_as_canvas(&state, 50);
         assert_eq!(
             &big_canvas.render_to_string(Some("|")),
             "Data Dump                                         |

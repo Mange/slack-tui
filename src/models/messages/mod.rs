@@ -9,8 +9,7 @@ use chrono::{DateTime, TimeZone};
 use slack::api;
 use failure::Error;
 
-use models::Canvas;
-use models::ChannelID;
+use models::{AppState, Canvas, ChannelID};
 
 pub use self::error::ErrorMessage;
 pub use self::standard::StandardMessage;
@@ -19,7 +18,7 @@ pub use self::unsupported::UnsupportedMessage;
 
 mod prelude {
     pub use super::{HistoryEntry, Message, MessageID, MessageSideChannel};
-    pub use models::{Canvas, ChannelID};
+    pub use models::{AppState, Canvas, ChannelID};
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -36,7 +35,7 @@ pub trait HistoryEntry {
     fn id(&self) -> &MessageID;
     fn channel_id(&self) -> &ChannelID;
 
-    fn render_as_canvas(&self, width: u16) -> Canvas;
+    fn render_as_canvas(&self, state: &AppState, width: u16) -> Canvas;
     fn into_message(self) -> Message;
 }
 
@@ -166,12 +165,12 @@ impl HistoryEntry for Message {
         }
     }
 
-    fn render_as_canvas(&self, width: u16) -> Canvas {
+    fn render_as_canvas(&self, state: &AppState, width: u16) -> Canvas {
         use self::Message::*;
         match *self {
-            Standard(ref msg) => msg.render_as_canvas(width),
-            Unsupported(ref msg) => msg.render_as_canvas(width),
-            Error(ref msg) => msg.render_as_canvas(width),
+            Standard(ref msg) => msg.render_as_canvas(state, width),
+            Unsupported(ref msg) => msg.render_as_canvas(state, width),
+            Error(ref msg) => msg.render_as_canvas(state, width),
         }
     }
 

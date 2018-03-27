@@ -74,7 +74,7 @@ impl HistoryEntry for UnsupportedMessage {
         &self.channel_id
     }
 
-    fn render_as_canvas(&self, width: u16) -> Canvas {
+    fn render_as_canvas(&self, _state: &AppState, width: u16) -> Canvas {
         use tui::style::*;
 
         let faint = Style::default().modifier(Modifier::Faint);
@@ -104,6 +104,7 @@ mod tests {
 
     #[test]
     fn it_renders_as_canvas() {
+        let state = AppState::fixture();
         let message = UnsupportedMessage {
             id: "1110000.000000".into(),
             channel_id: "C1".into(),
@@ -112,7 +113,7 @@ mod tests {
             subtype: Some(String::from("mystery_event")),
         };
 
-        let big_canvas = message.render_as_canvas(50);
+        let big_canvas = message.render_as_canvas(&state, 50);
         assert_eq!(
             &big_canvas.render_to_string(Some("|")),
             "Mystery                                           |
@@ -120,7 +121,7 @@ mod tests {
 Thing happened                                    |"
         );
 
-        let small_canvas = message.render_as_canvas(15);
+        let small_canvas = message.render_as_canvas(&state, 15);
         assert_eq!(
             &small_canvas.render_to_string(Some("|")),
             "Mystery        |

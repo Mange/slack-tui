@@ -23,16 +23,32 @@ pub struct AppState {
 }
 
 impl AppState {
+    #[cfg(test)]
+    pub fn fixture() -> Self {
+        AppState {
+            current_mode: Mode::default(),
+
+            chat_canvas: RefCell::new(None),
+            history_scroll: 0,
+            last_chat_height: Cell::new(0),
+
+            selected_channel_id: ChannelID::from("C0"),
+            channels: ChannelList::default(),
+
+            is_loading_more_messages: false,
+            messages: MessageBuffer::default(),
+
+            team_name: String::from("Fake Team"),
+            users: UserList::default(),
+        }
+    }
+
     pub fn rendered_chat_canvas(&self, width: u16, height: u16) -> Ref<Canvas> {
         // Populate RefCell inside this scope when not present.
         {
             let mut cache = self.chat_canvas.borrow_mut();
             if cache.is_none() {
-                let canvas = self.messages.render_as_canvas(
-                    &self.selected_channel_id,
-                    width,
-                    self.is_loading_more_messages,
-                );
+                let canvas = self.messages.render_as_canvas(self, width);
                 *cache = Some(canvas);
             }
         }

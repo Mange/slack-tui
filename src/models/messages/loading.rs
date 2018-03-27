@@ -1,4 +1,4 @@
-use models::Canvas;
+use models::{AppState, Canvas};
 
 #[derive(Clone, Debug)]
 pub struct LoadingMessage {}
@@ -8,7 +8,7 @@ impl LoadingMessage {
         LoadingMessage {}
     }
 
-    pub fn render_as_canvas(&self, width: u16) -> Canvas {
+    pub fn render_as_canvas(&self, _state: &AppState, width: u16) -> Canvas {
         use tui::style::*;
 
         let mut canvas = Canvas::new(width);
@@ -27,15 +27,16 @@ mod tests {
 
     #[test]
     fn it_renders_as_canvas() {
+        let state = AppState::fixture();
         let message = LoadingMessage::new();
 
-        let big_canvas = message.render_as_canvas(50);
+        let big_canvas = message.render_as_canvas(&state, 50);
         assert_eq!(
             &big_canvas.render_to_string(Some("|")),
             "              Loading more messages               |"
         );
 
-        let small_canvas = message.render_as_canvas(20);
+        let small_canvas = message.render_as_canvas(&state, 20);
         assert_eq!(
             &small_canvas.render_to_string(Some("|")),
             "Loading more message|",
