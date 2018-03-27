@@ -47,6 +47,7 @@ impl UnsupportedMessage {
         from: &Option<String>,
         text: &Option<String>,
         subtype: &Option<String>,
+        side_channel: &MessageSideChannel,
     ) -> Result<UnsupportedMessage, Error> {
         Ok(UnsupportedMessage {
             id: id.clone()

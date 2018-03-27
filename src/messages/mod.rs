@@ -20,7 +20,7 @@ pub use self::loading::LoadingMessage;
 pub use self::unsupported::UnsupportedMessage;
 
 mod prelude {
-    pub use super::{HistoryEntry, Message, MessageID};
+    pub use super::{HistoryEntry, Message, MessageID, MessageSideChannel};
     pub use chat::ChannelID;
     pub use canvas::Canvas;
 }
@@ -43,25 +43,38 @@ pub trait HistoryEntry {
     fn into_message(self) -> Message;
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct MessageSideChannel {
+    pub channel_id: Option<ChannelID>,
+}
+
 fn unsupported(
     id: &Option<String>,
     channel: &Option<String>,
     from: &Option<String>,
     text: &Option<String>,
     subtype: &Option<String>,
+    side_channel: &MessageSideChannel,
 ) -> Result<Option<Message>, Error> {
-    match UnsupportedMessage::from_slack_message(id, channel, from, text, subtype) {
+    match UnsupportedMessage::from_slack_message(id, channel, from, text, subtype, side_channel) {
         Ok(message) => Ok(Some(message.into_message())),
         Err(error) => Err(error),
     }
 }
 
 impl Message {
-    pub fn from_slack_message(msg: &api::Message) -> Result<Option<Self>, Error> {
+    pub fn from_slack_message<'a, S>(
+        msg: &api::Message,
+        side_channel: S,
+    ) -> Result<Option<Self>, Error>
+    where
+        S: Into<Option<&'a MessageSideChannel>>,
+    {
         use self::api::Message as S;
+        let side_channel = side_channel.into().cloned().unwrap_or_default();
         match *msg {
             S::Standard(ref msg) => {
-                StandardMessage::from_slack(msg).map(|m| Some(m.into_message()))
+                StandardMessage::from_slack(msg, &side_channel).map(|m| Some(m.into_message()))
             }
             // TODO: slack_api does not have the "channel" key for a lot of messages.
             // Underlying cause: The https://github.com/slack-rs/slack-api-schemas repo does not
@@ -91,6 +104,7 @@ impl Message {
                 &msg.message.as_ref().and_then(|m| m.user.clone()),
                 &msg.message.as_ref().and_then(|c| c.text.clone()),
                 &msg.subtype,
+                &side_channel,
             ),
             S::MessageDeleted(ref msg) => unsupported(
                 &msg.ts,
@@ -98,6 +112,7 @@ impl Message {
                 &Some(String::from("Message deleted")),
                 &Some(String::from("Message was deleted")),
                 &msg.subtype,
+                &side_channel,
             ),
             S::MessageReplied(ref msg) => unsupported(
                 &msg.ts,
@@ -105,20 +120,32 @@ impl Message {
                 &msg.message.as_ref().and_then(|m| m.user.clone()),
                 &msg.message.as_ref().and_then(|c| c.text.clone()),
                 &msg.subtype,
+                &side_channel,
             ),
-            S::PinnedItem(ref msg) => {
-                unsupported(&msg.ts, &msg.channel, &msg.user, &msg.text, &msg.subtype)
-            }
+            S::PinnedItem(ref msg) => unsupported(
+                &msg.ts,
+                &msg.channel,
+                &msg.user,
+                &msg.text,
+                &msg.subtype,
+                &side_channel,
+            ),
             S::ReplyBroadcast(ref msg) => unsupported(
                 &msg.ts,
                 &msg.channel,
                 &msg.user,
                 &Some(String::from("Message got a broadcasted reply")),
                 &msg.subtype,
+                &side_channel,
             ),
-            S::UnpinnedItem(ref msg) => {
-                unsupported(&msg.ts, &msg.channel, &msg.user, &msg.text, &msg.subtype)
-            }
+            S::UnpinnedItem(ref msg) => unsupported(
+                &msg.ts,
+                &msg.channel,
+                &msg.user,
+                &msg.text,
+                &msg.subtype,
+                &side_channel,
+            ),
         }
     }
 }

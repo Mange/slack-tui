@@ -109,7 +109,7 @@ impl SlackEventHandler {
     }
 
     fn new_message(&mut self, msg: slack::Message) -> Result<(), Error> {
-        match Message::from_slack_message(&msg)? {
+        match Message::from_slack_message(&msg, None)? {
             Some(message) => self.tx.send(Event::Message(Box::new(message)))?,
             None => {}
         }
@@ -456,15 +456,16 @@ impl App {
     fn accept_task_result(&mut self, result: data::loader::TaskResult) -> Result<(), Error> {
         use data::loader::TaskResult;
         match result {
-            TaskResult::ChannelHistory(_, response) => {
+            TaskResult::ChannelHistory(channel_id, response) => {
                 self.set_loading_state(false);
-                self.accept_channel_history(response)
+                self.accept_channel_history(channel_id, response)
             }
         }
     }
 
     fn accept_channel_history(
         &mut self,
+        channel_id: ChannelID,
         response: Result<
             slack::api::channels::HistoryResponse,
             slack::api::channels::HistoryError<slack::api::requests::Error>,
@@ -473,8 +474,13 @@ impl App {
         match response {
             Ok(response) => {
                 if let Some(messages) = response.messages {
+                    let side_channel = messages::MessageSideChannel {
+                        channel_id: Some(channel_id),
+                        ..Default::default()
+                    };
+
                     for message in messages.into_iter() {
-                        match Message::from_slack_message(&message) {
+                        match Message::from_slack_message(&message, &side_channel) {
                             Ok(Some(message)) => self.add_message(message),
                             Ok(None) => {}
                             Err(error) => self.add_error_message(error.context(

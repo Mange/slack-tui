@@ -16,13 +16,20 @@ pub struct StandardMessage {
 }
 
 impl StandardMessage {
-    pub fn from_slack(msg: &api::MessageStandard) -> Result<Self, Error> {
+    pub fn from_slack(
+        msg: &api::MessageStandard,
+        side_channel: &MessageSideChannel,
+    ) -> Result<Self, Error> {
         let ts = match msg.ts.clone() {
             Some(val) => val,
             None => return Err(format_err!("Message had no ts:\n{:#?}", msg)),
         };
 
-        let channel_id = match msg.channel.clone() {
+        let channel_id = match msg.channel
+            .clone()
+            .map(ChannelID::from)
+            .or_else(|| side_channel.channel_id.clone())
+        {
             Some(val) => val,
             None => return Err(format_err!("Message had no channel:\n{:#?}", msg)),
         };
@@ -36,7 +43,7 @@ impl StandardMessage {
         Ok(StandardMessage {
             message_id,
             thread_id,
-            channel_id: ChannelID::from(channel_id),
+            channel_id,
             body: msg.text.clone().unwrap_or_else(|| String::new()),
             from: msg.user.clone().unwrap(),
         })
@@ -98,6 +105,52 @@ impl HistoryEntry for StandardMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fake_slack_message() -> api::MessageStandard {
+        api::MessageStandard {
+            attachments: None,
+            bot_id: None,
+            channel: Some(String::from("C1")),
+            edited: None,
+            event_ts: None,
+            reply_broadcast: None,
+            source_team: None,
+            team: None,
+            text: None,
+            thread_ts: None,
+            ts: Some(String::from("1111")),
+            ty: None,
+            user: Some(String::from("U1")),
+        }
+    }
+
+    #[test]
+    fn it_uses_side_channel_to_fill_in_channel_when_missing() {
+        let mut slack_message_with_channel = fake_slack_message();
+        let mut slack_message_without_channel = fake_slack_message();
+
+        slack_message_with_channel.channel = Some(String::from("C555"));
+        slack_message_without_channel.channel = None;
+
+        let side_channel = MessageSideChannel {
+            channel_id: Some(ChannelID::from("C123")),
+        };
+
+        let message_not_using_side_channel =
+            StandardMessage::from_slack(&slack_message_with_channel, &side_channel).unwrap();
+
+        let message_using_side_channel =
+            StandardMessage::from_slack(&slack_message_without_channel, &side_channel).unwrap();
+
+        assert_eq!(
+            message_not_using_side_channel.channel_id,
+            ChannelID::from("C555")
+        );
+        assert_eq!(
+            message_using_side_channel.channel_id,
+            ChannelID::from("C123")
+        );
+    }
 
     #[test]
     fn it_renders_as_canvas() {

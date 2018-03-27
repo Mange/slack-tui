@@ -114,6 +114,7 @@ impl BackgroundLoader {
             },
         );
         self.results
-            .send(TaskResult::ChannelHistory(channel_id, response));
+            .send(TaskResult::ChannelHistory(channel_id, response))
+            .ok();
     }
 }
