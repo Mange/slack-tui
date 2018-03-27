@@ -242,7 +242,7 @@ mod tests {
         ($a:ident, $b:ident) => {
             match (&$a, &$b) {
                 (ref a, ref b) => {
-                    use render_buffer;
+                    use util::render_buffer;
                     assert_eq!(a.area, b.area, "Expected buffer areas to be equal");
                     assert_eq!(a.content.len(), b.content.len(), "Expected buffer content sizes to be equal");
                     if a.content != b.content {

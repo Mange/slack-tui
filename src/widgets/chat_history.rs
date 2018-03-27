@@ -3,7 +3,8 @@ use tui::layout::Rect;
 use tui::buffer::Buffer;
 
 use widgets::Scrollbar;
-use canvas::{Canvas, ViewportOptions};
+use models::Canvas;
+use models::canvas::ViewportOptions;
 
 pub struct ChatHistory<'a> {
     scroll: usize,

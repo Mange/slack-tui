@@ -1,6 +1,5 @@
-use slack::api::{User as SlackUser, UserProfile};
+use slack::api::User as SlackUser;
 
-use std::hash::{Hash, Hasher};
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
 
@@ -13,7 +12,7 @@ pub struct User {
     display_name: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UserList {
     users: BTreeMap<UserID, User>,
 }

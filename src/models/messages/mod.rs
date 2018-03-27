@@ -1,4 +1,3 @@
-mod buffer;
 mod error;
 mod loading;
 mod standard;
@@ -10,10 +9,9 @@ use chrono::{DateTime, TimeZone};
 use slack::api;
 use failure::Error;
 
-use canvas::Canvas;
-use chat::ChannelID;
+use models::Canvas;
+use models::ChannelID;
 
-pub use self::buffer::Buffer;
 pub use self::error::ErrorMessage;
 pub use self::standard::StandardMessage;
 pub use self::loading::LoadingMessage;
@@ -21,8 +19,7 @@ pub use self::unsupported::UnsupportedMessage;
 
 mod prelude {
     pub use super::{HistoryEntry, Message, MessageID, MessageSideChannel};
-    pub use chat::ChannelID;
-    pub use canvas::Canvas;
+    pub use models::{Canvas, ChannelID};
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]

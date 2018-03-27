@@ -1,4 +1,4 @@
-use canvas::Canvas;
+use models::Canvas;
 
 #[derive(Clone, Debug)]
 pub struct LoadingMessage {}

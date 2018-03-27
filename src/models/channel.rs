@@ -18,7 +18,7 @@ pub struct Channel {
     topic_text: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ChannelList {
     channels: BTreeMap<ChannelID, Channel>,
 }

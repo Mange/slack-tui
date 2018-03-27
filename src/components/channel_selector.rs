@@ -1,5 +1,5 @@
 use std::cmp::{Ord, Ordering, PartialOrd};
-use chat::{Channel, ChannelID, ChannelList};
+use models::{Channel, ChannelID, ChannelList};
 
 #[derive(Debug)]
 pub struct ChannelSelector {
@@ -105,13 +105,16 @@ impl ChannelSelector {
             .filter(|m| m.score > 0.0)
             .collect();
         matches.sort();
+        if matches.len() > max {
+            matches.split_off(max);
+        }
         matches
     }
 
-    pub fn select(&self, channels: &ChannelList) -> ChannelID {
-        let top_matches = self.top_matches(channels, self.selected_index);
-        let index = self.selected_index.min(top_matches.len() - 1);
-        top_matches[index].channel.id().clone()
+    pub fn select(&self, channels: &ChannelList) -> Option<ChannelID> {
+        self.top_matches(channels, self.selected_index + 1)
+            .get(self.selected_index)
+            .map(|channel_match| channel_match.channel.id().clone())
     }
 }
 
@@ -119,11 +122,9 @@ fn calculate_score(channel: &Channel, text: &str) -> f32 {
     // Find first character from text in channel name, then search for second text character to the
     // right, and so on. If a character is not found, return a negative score.
     let mut name = channel.name();
-    let mut cursor = 0;
     for chr in text.chars() {
         match name.find(chr) {
             Some(pos) => {
-                cursor = pos;
                 name = &name[pos..];
             }
             None => return -1.0,
@@ -269,11 +270,19 @@ mod tests {
         channel_selector.add_character('o');
         channel_selector.add_character('o');
 
-        let top_channels: Vec<&str> = channel_selector
+        let three_top_channels: Vec<&str> = channel_selector
             .top_matches(&channel_list, 3)
             .iter()
             .map(|m| m.channel.name())
             .collect();
-        assert_eq!(&top_channels, &["foobar", "foosball"]);
+
+        let one_top_channels: Vec<&str> = channel_selector
+            .top_matches(&channel_list, 1)
+            .iter()
+            .map(|m| m.channel.name())
+            .collect();
+
+        assert_eq!(&three_top_channels, &["foobar", "foosball"]);
+        assert_eq!(&one_top_channels, &["foobar"]);
     }
 }

@@ -56,6 +56,7 @@ impl UnsupportedMessage {
             channel_id: channel_id
                 .clone()
                 .map(ChannelID::from)
+                .or_else(|| side_channel.channel_id.clone())
                 .ok_or_else(|| format_err!("Channel ID was blank"))?,
             from: from.clone().ok_or_else(|| format_err!("from is missing"))?,
             text: text.clone().ok_or_else(|| format_err!("text is missing"))?,

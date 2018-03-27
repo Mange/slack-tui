@@ -5,10 +5,10 @@ use tui::widgets::Widget;
 use tui::layout::Rect;
 use tui::buffer::Buffer;
 
-use chat::{self, ChannelID};
+use models::{self, ChannelID};
 
 pub struct ChannelList<'a> {
-    channels: &'a chat::ChannelList,
+    channels: &'a models::ChannelList,
     selected_id: &'a ChannelID,
 }
 
@@ -20,7 +20,7 @@ struct ChannelEntry<'a> {
 }
 
 impl<'a> ChannelList<'a> {
-    pub fn new(channels: &'a chat::ChannelList, selected_id: &'a ChannelID) -> Self {
+    pub fn new(channels: &'a models::ChannelList, selected_id: &'a ChannelID) -> Self {
         ChannelList {
             channels,
             selected_id,

@@ -1,15 +1,16 @@
 use std::collections::BTreeMap;
 
-use messages::*;
-use canvas::Canvas;
+use models::messages::*;
+use models::{Canvas, ChannelID};
 
-pub struct Buffer {
+#[derive(Debug, Default)]
+pub struct MessageBuffer {
     messages: BTreeMap<MessageID, Message>,
 }
 
-impl Buffer {
+impl MessageBuffer {
     pub fn new() -> Self {
-        Buffer {
+        MessageBuffer {
             messages: BTreeMap::new(),
         }
     }
@@ -49,7 +50,7 @@ mod tests {
 
     #[test]
     fn it_renders_messages_as_canvas() {
-        let mut message_buffer = Buffer::new();
+        let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
             from: "Example".into(),
             body: "Hello...".into(),
@@ -79,7 +80,7 @@ Example   |
 
     #[test]
     fn it_adds_loading_message_when_loading() {
-        let mut message_buffer = Buffer::new();
+        let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
             from: "Example".into(),
             body: "Hello World".into(),
@@ -100,7 +101,7 @@ Hello World                                       |
 
     #[test]
     fn it_skips_messages_in_other_channels() {
-        let mut message_buffer = Buffer::new();
+        let mut message_buffer = MessageBuffer::new();
         message_buffer.add(StandardMessage {
             from: "Example".into(),
             body: "First channel".into(),

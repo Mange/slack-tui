@@ -1,11 +1,11 @@
 use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
 
-use failure::{Error, Fail};
+use failure::Fail;
 use chrono::prelude::*;
 
 use super::prelude::*;
-use format_error_with_causes;
+use util::format_error_with_causes;
 
 #[derive(Clone, Debug)]
 pub struct ErrorMessage {

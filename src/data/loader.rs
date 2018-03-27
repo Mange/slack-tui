@@ -5,8 +5,7 @@ use slack::api;
 
 use failure::Error;
 
-use chat::ChannelID;
-use messages::MessageID;
+use models::{ChannelID, MessageID};
 
 #[derive(Debug)]
 enum Task {
@@ -28,6 +27,7 @@ struct BackgroundLoader {
     slack_api_key: String,
 }
 
+#[derive(Debug)]
 pub struct Loader {
     requests: mpsc::Sender<Task>,
     results: mpsc::Receiver<TaskResult>,

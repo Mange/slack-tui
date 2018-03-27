@@ -1,23 +1,23 @@
-use super::{App, Mode};
-use super::TerminalBackend;
-use widgets::{self, ChatHistory};
-
 use tui::widgets::*;
 use tui::layout::{Direction, Group, Rect, Size};
 use tui::style::*;
 
-pub fn render(app: &App, terminal: &mut TerminalBackend) {
-    let size = &app.size;
+use TerminalBackend;
+use models::{AppState, Mode};
+use widgets::{self, ChatHistory};
+use components::App;
+
+pub fn render(app: &App, terminal: &mut TerminalBackend, size: &Rect) {
     Group::default()
         .direction(Direction::Horizontal)
         .margin(0)
         .sizes(&[Size::Percent(20), Size::Percent(80)])
         .render(terminal, size, |terminal, chunks| {
-            render_sidebar(app, terminal, &chunks[0]);
-            render_main(app, terminal, &chunks[1]);
+            render_sidebar(app.state(), terminal, &chunks[0]);
+            render_main(app.state(), terminal, &chunks[1]);
         });
 
-    if app.current_mode == Mode::SelectChannel {
+    if app.state().current_mode() == &Mode::SelectChannel {
         let mut selector_rect = size.clone();
         // Pick the largest out of 50% and X cells in both directions, but also cap it to display
         // size if it's smaller than the intended minimum.
@@ -27,19 +27,19 @@ pub fn render(app: &App, terminal: &mut TerminalBackend) {
         selector_rect.x = (size.x + size.width / 2) - (selector_rect.width / 2);
         selector_rect.y = (size.y + size.height / 2) - (selector_rect.height / 2);
 
-        render_channel_selector(app, terminal, &selector_rect);
+        render_channel_selector(&app, terminal, &selector_rect);
     }
 }
 
-fn render_sidebar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_sidebar(state: &AppState, terminal: &mut TerminalBackend, rect: &Rect) {
     let mut block = Block::default().borders(Borders::RIGHT);
     block.render(terminal, rect);
 
-    widgets::ChannelList::new(&app.channels, app.selected_channel_id())
+    widgets::ChannelList::new(&state.channels, state.selected_channel_id())
         .render(terminal, &block.inner(rect));
 }
 
-fn render_main(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_main(state: &AppState, terminal: &mut TerminalBackend, rect: &Rect) {
     Group::default()
         .direction(Direction::Vertical)
         .sizes(&[
@@ -49,15 +49,15 @@ fn render_main(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
             Size::Fixed(1),
         ])
         .render(terminal, rect, |terminal, chunks| {
-            render_breadcrumbs(app, terminal, &chunks[0]);
-            render_history(app, terminal, &chunks[1]);
-            render_statusbar(app, terminal, &chunks[2]);
-            render_input(app, terminal, &chunks[3]);
+            render_breadcrumbs(state, terminal, &chunks[0]);
+            render_history(state, terminal, &chunks[1]);
+            render_statusbar(state, terminal, &chunks[2]);
+            render_input(state, terminal, &chunks[3]);
         });
 }
 
-fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    match app.selected_channel() {
+fn render_breadcrumbs(state: &AppState, terminal: &mut TerminalBackend, rect: &Rect) {
+    match state.selected_channel() {
         Some(channel) => {
             let topic = match channel.topic_text() {
                 Some(text) => format!("{{fg=white {}}}", text),
@@ -66,7 +66,7 @@ fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
             Paragraph::default()
                 .text(&format!(
                     "{{mod=bold {team}}} > {{mod=bold #{channel}}} [{topic}]",
-                    team = app.team_name,
+                    team = state.team_name,
                     channel = channel.name(),
                     topic = topic
                 ))
@@ -75,28 +75,28 @@ fn render_breadcrumbs(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
         }
         None => {
             Paragraph::default()
-                .text(&format!("{} > (No channel selected)", app.team_name))
+                .text(&format!("{} > (No channel selected)", state.team_name))
                 .style(Style::default().bg(Color::Gray).fg(Color::White))
                 .render(terminal, rect);
         }
     }
 }
 
-fn render_history(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_history(state: &AppState, terminal: &mut TerminalBackend, rect: &Rect) {
     if rect.width < 2 {
         return;
     }
 
     // Leave one width for scrollbar
-    let canvas = app.rendered_chat_canvas(rect.width - 1, rect.height);
+    let canvas = state.rendered_chat_canvas(rect.width - 1, rect.height);
 
     ChatHistory::with_canvas(&canvas)
-        .scroll(app.current_history_scroll())
+        .scroll(state.current_history_scroll())
         .render(terminal, rect);
 }
 
-fn render_statusbar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
-    let (mode, mode_color) = match app.current_mode {
+fn render_statusbar(state: &AppState, terminal: &mut TerminalBackend, rect: &Rect) {
+    let (mode, mode_color) = match state.current_mode {
         Mode::History => ("HISTORY", "bg=cyan;fg=black"),
         Mode::SelectChannel => ("CHANNELS", "bg=black;fg=white"),
     };
@@ -105,14 +105,14 @@ fn render_statusbar(app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
             "{{{mode_color} {mode}}} - [{offset}/{height}]",
             mode = mode,
             mode_color = mode_color,
-            offset = app.history_scroll,
-            height = app.max_history_scroll(),
+            offset = state.history_scroll,
+            height = state.max_history_scroll(),
         ))
         .style(Style::default().bg(Color::Gray).fg(Color::White))
         .render(terminal, rect);
 }
 
-fn render_input(_app: &App, terminal: &mut TerminalBackend, rect: &Rect) {
+fn render_input(_state: &AppState, terminal: &mut TerminalBackend, rect: &Rect) {
     Paragraph::default()
         .text("{fg=dark_gray Enter a reply...}")
         .style(Style::default().bg(Color::Black).fg(Color::White))
@@ -154,7 +154,7 @@ fn render_channel_selector(app: &App, terminal: &mut TerminalBackend, rect: &Rec
     //
     // Pad all items with spaces to achieve the same effect.
     let matches: Vec<String> = app.channel_selector
-        .top_matches(&app.channels, list_rect.height as usize)
+        .top_matches(&app.state().channels, list_rect.height as usize)
         .into_iter()
         .map(|m| format!("#{:<1$}", m.channel.name(), list_rect.width as usize))
         .collect();
