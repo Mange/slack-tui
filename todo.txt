@@ -2,9 +2,13 @@ Tasks to do:
 
   x Only show messages that are in the current channel.
   x Load history when switching channel.
-  - Adding the same message to the message buffer again should merge with the old record.
   x Load users, render user names with messages instead.
+    - Use UserList::name_of instead of fetching full user
+  - Adding the same message to the message buffer again should merge with the old record.
   - Parse message text markup.
+  - Add a ChannelStart message type (for the end of the history)
+  - Load more messages when reaching top 90% of chat history, unless first message is a ChannelStart message.
+    - Requires having methods to quickly find the oldest message of a channel.
   - Add input for writing replies.
     - (very simple Insert and Normal modes)
     - Actually send the text.
