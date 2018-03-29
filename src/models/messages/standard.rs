@@ -1,8 +1,8 @@
-use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
+use std::hash::{Hash, Hasher};
 
-use slack::api;
 use failure::Error;
+use slack::api;
 
 use super::prelude::*;
 use models::UserID;
@@ -89,14 +89,11 @@ impl HistoryEntry for StandardMessage {
     fn render_as_canvas(&self, state: &AppState, width: u16) -> Canvas {
         use tui::style::*;
 
-        let user = state.users.get(&self.user_id);
+        let user_name = state.users.display_name_of(&self.user_id);
 
         let underlined = Style::default().modifier(Modifier::Underline);
         let mut canvas = Canvas::new(width);
-        match user {
-            Some(user) => canvas.add_string_truncated(user.display_name(), underlined),
-            None => canvas.add_string_truncated(self.user_id.as_str(), underlined),
-        }
+        canvas.add_string_truncated(user_name, underlined);
         canvas.add_string_truncated("\n", Style::default());
         canvas.add_string_wrapped(&format!("{}\n", self.body), Style::default());
 

@@ -66,8 +66,10 @@ impl UserList {
         }
     }
 
-    pub fn name_of(&self, id: &UserID) -> Option<&str> {
-        self.get(id).map(User::display_name)
+    pub fn display_name_of<'a>(&'a self, id: &'a UserID) -> &'a str {
+        self.get(id)
+            .map(User::display_name)
+            .unwrap_or_else(|| id.as_str())
     }
 
     #[cfg(test)]
