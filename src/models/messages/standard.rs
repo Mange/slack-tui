@@ -89,11 +89,19 @@ impl HistoryEntry for StandardMessage {
     fn render_as_canvas(&self, state: &AppState, width: u16) -> Canvas {
         use tui::style::*;
 
-        let user_name = state.users.display_name_of(&self.user_id);
+        let user = state.users.get(&self.user_id);
 
         let underlined = Style::default().modifier(Modifier::Underline);
         let mut canvas = Canvas::new(width);
-        canvas.add_string_truncated(user_name, underlined);
+        match user {
+            Some(user) => {
+                let color_style = underlined.clone().fg(user.color());
+                canvas.add_string_truncated(user.display_name(), color_style)
+            }
+            None => {
+                canvas.add_string_truncated(self.user_id.as_str(), Style::default().fg(Color::Red))
+            }
+        }
         canvas.add_string_truncated("\n", Style::default());
         canvas.add_string_wrapped(&format!("{}\n", self.body), Style::default());
 

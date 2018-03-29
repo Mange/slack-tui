@@ -1,4 +1,8 @@
+extern crate hex;
+
+use self::hex::FromHex;
 use slack::api::User as SlackUser;
+use tui::style::Color;
 
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
@@ -10,6 +14,7 @@ pub struct UserID(String);
 pub struct User {
     id: UserID,
     display_name: String,
+    color: Option<[u8; 3]>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -26,11 +31,14 @@ impl User {
             None => return None,
         };
 
+        let hex_color = slack_user.color.as_ref().map(String::as_ref).unwrap_or("");
+
         // TODO: slack_api 0.18 does not have everything that we need under the UserProfile key
         // let profile = slack_user.profile.as_ref();
 
         Some(User {
             id,
+            color: <[u8; 3]>::from_hex(hex_color).ok(),
             display_name: slack_user
                 .name
                 .clone()
@@ -46,6 +54,7 @@ impl User {
     {
         User {
             id: id.into(),
+            color: None,
             display_name: display_name.into(),
         }
     }
@@ -57,6 +66,13 @@ impl User {
     pub fn display_name(&self) -> &str {
         &self.display_name
     }
+
+    pub fn color(&self) -> Color {
+        match self.color {
+            Some(rgb) => Color::Rgb(rgb[0], rgb[1], rgb[2]),
+            None => Color::Reset,
+        }
+    }
 }
 
 impl UserList {
@@ -64,12 +80,6 @@ impl UserList {
         UserList {
             users: BTreeMap::new(),
         }
-    }
-
-    pub fn display_name_of<'a>(&'a self, id: &'a UserID) -> &'a str {
-        self.get(id)
-            .map(User::display_name)
-            .unwrap_or_else(|| id.as_str())
     }
 
     #[cfg(test)]
