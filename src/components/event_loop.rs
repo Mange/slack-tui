@@ -8,9 +8,9 @@ use std::time::Duration;
 use termion::event::Key;
 use termion::input::TermRead;
 
-use TerminalBackend;
 use components::{input_manager, App, KeyManager};
 use models::Message;
+use TerminalBackend;
 
 #[derive(Debug)]
 pub enum Event {

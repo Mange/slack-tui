@@ -53,7 +53,8 @@ impl Canvas {
             self.width,
             viewport_options.height,
         );
-        let mut cells: Vec<Cell> = self.cells
+        let mut cells: Vec<Cell> = self
+            .cells
             .iter()
             .skip(viewport_options.offset as usize * self.width as usize)
             .take(viewport_options.height as usize * self.width as usize)
@@ -73,7 +74,8 @@ impl Canvas {
         let mut total_chars = 0;
         let width = self.width as usize;
 
-        for (i, chr) in self.cells
+        for (i, chr) in self
+            .cells
             .iter()
             .flat_map(|c| c.symbol.chars().next())
             .enumerate()
@@ -228,9 +230,9 @@ impl ViewportOptions {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use tui::layout::Rect;
     use tui::style::Color;
-    use super::*;
 
     fn cell(chr: char, style: Style) -> Cell {
         let mut cell = Cell::default();
@@ -244,7 +246,11 @@ mod tests {
                 (ref a, ref b) => {
                     use util::render_buffer;
                     assert_eq!(a.area, b.area, "Expected buffer areas to be equal");
-                    assert_eq!(a.content.len(), b.content.len(), "Expected buffer content sizes to be equal");
+                    assert_eq!(
+                        a.content.len(),
+                        b.content.len(),
+                        "Expected buffer content sizes to be equal"
+                    );
                     if a.content != b.content {
                         panic!(
                             "Expected cells to be equal:\n{}\n\n-=-=-=-=-=-=-=-=-\n\n{}",
@@ -254,7 +260,7 @@ mod tests {
                     }
                 }
             }
-        }
+        };
     }
 
     #[test]

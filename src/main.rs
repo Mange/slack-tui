@@ -30,9 +30,9 @@ mod widgets;
 /// Helpful functions, mostly related to errors.
 mod util;
 
-use tui::Terminal;
-use tui::backend::MouseBackend;
 use failure::{Error, Fail, ResultExt};
+use tui::backend::MouseBackend;
+use tui::Terminal;
 
 pub type TerminalBackend = Terminal<MouseBackend>;
 

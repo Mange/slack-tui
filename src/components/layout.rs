@@ -1,11 +1,11 @@
-use tui::widgets::*;
 use tui::layout::{Direction, Group, Rect, Size};
 use tui::style::*;
+use tui::widgets::*;
 
-use TerminalBackend;
+use components::App;
 use models::{AppState, Mode};
 use widgets::{self, ChatHistory};
-use components::App;
+use TerminalBackend;
 
 pub fn render(app: &App, terminal: &mut TerminalBackend, size: &Rect) {
     Group::default()
@@ -153,7 +153,8 @@ fn render_channel_selector(app: &App, terminal: &mut TerminalBackend, rect: &Rec
     // https://github.com/fdehau/tui-rs/issues/42
     //
     // Pad all items with spaces to achieve the same effect.
-    let matches: Vec<String> = app.channel_selector
+    let matches: Vec<String> = app
+        .channel_selector
         .top_matches(&app.state().channels, list_rect.height as usize)
         .into_iter()
         .map(|m| format!("#{:<1$}", m.channel.name(), list_rect.width as usize))

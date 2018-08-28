@@ -39,7 +39,8 @@ impl<'a> LineEdit<'a> {
 impl<'a> Widget for LineEdit<'a> {
     fn draw(&mut self, area: &Rect, buf: &mut Buffer) {
         // Leave one extra cell for cursor
-        let offset = self.text
+        let offset = self
+            .text
             .len()
             .saturating_sub(area.width as usize)
             .saturating_sub(1)

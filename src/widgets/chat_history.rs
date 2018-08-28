@@ -1,10 +1,10 @@
-use tui::widgets::Widget;
-use tui::layout::Rect;
 use tui::buffer::Buffer;
+use tui::layout::Rect;
+use tui::widgets::Widget;
 
-use widgets::Scrollbar;
-use models::Canvas;
 use models::canvas::ViewportOptions;
+use models::Canvas;
+use widgets::Scrollbar;
 
 pub struct ChatHistory<'a> {
     scroll: usize,

@@ -1,5 +1,5 @@
-use std::cmp::{Ord, Ordering, PartialOrd};
 use models::{Channel, ChannelID, ChannelList};
+use std::cmp::{Ord, Ordering, PartialOrd};
 
 #[derive(Debug)]
 pub struct ChannelSelector {

@@ -28,7 +28,8 @@ impl MessageBuffer {
             canvas += LoadingMessage::new().render_as_canvas(state, width);
         }
 
-        for (_id, message) in self.messages
+        for (_id, message) in self
+            .messages
             .iter()
             .filter(|&(_, m)| m.channel_id() == state.selected_channel_id())
         {

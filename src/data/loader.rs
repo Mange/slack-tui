@@ -1,7 +1,7 @@
 extern crate slack;
+use slack::api;
 use std::sync::mpsc;
 use std::thread;
-use slack::api;
 
 use failure::Error;
 

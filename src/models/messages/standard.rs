@@ -26,7 +26,8 @@ impl StandardMessage {
             None => return Err(format_err!("Message had no ts:\n{:#?}", msg)),
         };
 
-        let channel_id = match msg.channel
+        let channel_id = match msg
+            .channel
             .clone()
             .map(ChannelID::from)
             .or_else(|| side_channel.channel_id.clone())
@@ -36,7 +37,8 @@ impl StandardMessage {
         };
 
         let message_id = MessageID::from(ts);
-        let thread_id = msg.ts
+        let thread_id = msg
+            .ts
             .clone()
             .map(MessageID::from)
             .unwrap_or_else(|| message_id.clone());

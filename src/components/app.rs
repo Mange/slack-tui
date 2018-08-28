@@ -1,14 +1,14 @@
 extern crate slack;
 extern crate termion;
 
-use tui::layout::Rect;
 use failure::{Error, Fail};
+use tui::layout::Rect;
 
-use TerminalBackend;
-use models::*;
 use components::*;
 use data::loader;
 use data::loader::Loader;
+use models::*;
+use TerminalBackend;
 
 #[derive(Debug)]
 pub struct App {

@@ -6,14 +6,14 @@ mod unsupported;
 use std::cmp::{Ord, Ordering, PartialOrd};
 
 use chrono::{DateTime, TimeZone};
-use slack::api;
 use failure::Error;
+use slack::api;
 
 use models::{AppState, Canvas, ChannelID};
 
 pub use self::error::ErrorMessage;
-pub use self::standard::StandardMessage;
 pub use self::loading::LoadingMessage;
+pub use self::standard::StandardMessage;
 pub use self::unsupported::UnsupportedMessage;
 
 mod prelude {

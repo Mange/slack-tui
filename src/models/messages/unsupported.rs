@@ -1,5 +1,5 @@
-use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
+use std::hash::{Hash, Hasher};
 
 use failure::Error;
 
@@ -50,7 +50,8 @@ impl UnsupportedMessage {
         side_channel: &MessageSideChannel,
     ) -> Result<UnsupportedMessage, Error> {
         Ok(UnsupportedMessage {
-            id: id.clone()
+            id: id
+                .clone()
                 .map(MessageID::from)
                 .ok_or_else(|| format_err!("ID was blank"))?,
             channel_id: channel_id

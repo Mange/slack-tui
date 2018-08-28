@@ -1,8 +1,8 @@
-use std::hash::{Hash, Hasher};
 use std::cmp::{Ord, Ordering, PartialOrd};
+use std::hash::{Hash, Hasher};
 
-use failure::Fail;
 use chrono::prelude::*;
+use failure::Fail;
 
 use super::prelude::*;
 use util::format_error_with_causes;

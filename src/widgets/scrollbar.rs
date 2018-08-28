@@ -1,9 +1,9 @@
 use std::ops::Range;
+use tui::buffer::Buffer;
+use tui::layout::Rect;
+use tui::style::Color;
 use tui::style::Style;
 use tui::widgets::Widget;
-use tui::style::Color;
-use tui::layout::Rect;
-use tui::buffer::Buffer;
 
 #[derive(Debug)]
 pub struct Scrollbar {
@@ -203,7 +203,8 @@ mod tests {
 
         for height in 3..500 {
             assert_eq!(
-                scrollbar.above_height(height) + scrollbar.shown_height(height)
+                scrollbar.above_height(height)
+                    + scrollbar.shown_height(height)
                     + scrollbar.below_height(height),
                 height,
                 "Heights do not add up to {}",

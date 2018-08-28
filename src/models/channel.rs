@@ -1,8 +1,8 @@
 extern crate slack;
 use slack::api::{Channel as SlackChannel, ChannelTopic};
 
-use std::hash::{Hash, Hasher};
 use std::collections::BTreeMap;
+use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

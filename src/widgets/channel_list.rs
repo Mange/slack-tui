@@ -1,9 +1,9 @@
 use std::cmp::{Eq, Ord, Ordering, PartialEq};
 
+use tui::buffer::Buffer;
+use tui::layout::Rect;
 use tui::style::*;
 use tui::widgets::Widget;
-use tui::layout::Rect;
-use tui::buffer::Buffer;
 
 use models::{self, ChannelID};
 
