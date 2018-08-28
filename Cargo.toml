@@ -4,12 +4,12 @@ version = "0.1.0"
 authors = ["Magnus Bergmark <magnus.bergmark@gmail.com>"]
 
 [dependencies]
-slack = "0.19.0"
+slack = "0.21.0"
 termion = "1.5.1"
-chrono = "0.4.0"
-dotenv = "0.11.0"
-failure = "0.1.1"
-hex = "0.3.1"
+chrono = "0.4.6"
+dotenv = "0.13.0"
+failure = "0.1.2"
+hex = "0.3.2"
 
 # Because of https://github.com/fdehau/tui-rs/pull/41
 # Clone my fork at ../tui-rs
